@@ -1,6 +1,7 @@
 security:
     password_hashers:
-        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+        App\Entity\User:
+            algorithm: auto
 
     providers:
         app_user_provider:
@@ -9,24 +10,19 @@ security:
                 property: email
 
     firewalls:
-
         dev:
-            pattern: ^/(_profiler|_wdt|css|images|js)/
+            pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
 
-        login:
-            pattern:  ^/api/login
-            stateless: true
-            json_login:
-                check_path: /api/login
-                username_path: email
-                password_path: password
-                success_handler: lexik_jwt_authentication.handler.authentication_success
-                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+        cors:
+            pattern: ^/
+            methods: [OPTIONS]
+            security: false
 
         api:
-            pattern:   ^/api
+            pattern: ^/api
             stateless: true
+            provider: app_user_provider
             jwt: ~
 
         main:
@@ -34,9 +30,26 @@ security:
             provider: app_user_provider
 
     access_control:
+        # OPTIONS toujours autorisés
+        - { path: ^/, roles: PUBLIC_ACCESS, methods: [OPTIONS] }
 
-        # login accessible sans token
-        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+        # Auth
+        - { path: ^/api/login,            roles: PUBLIC_ACCESS }
+        - { path: ^/api/register,         roles: PUBLIC_ACCESS }
 
-        # toutes les autres routes api protégées
-        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+        # Boutique publique
+        - { path: ^/api/shop/register,    roles: PUBLIC_ACCESS }
+        - { path: ^/api/shop/products,    roles: PUBLIC_ACCESS, methods: [GET] }
+
+        # Produits publics en lecture
+        - { path: ^/api/products,         roles: PUBLIC_ACCESS, methods: [GET] }
+
+        # Catégories publiques en lecture, admin pour écriture
+        - { path: ^/api/categories,       roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/categories,       roles: ROLE_ADMIN,    methods: [POST, PUT, DELETE] }
+
+        # Boutique client connecté
+        - { path: ^/api/shop/orders,      roles: ROLE_CLIENT }
+
+        # Tout le reste → connecté
+        - { path: ^/api,                  roles: IS_AUTHENTICATED_FULLY }

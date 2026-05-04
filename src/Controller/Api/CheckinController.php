@@ -13,6 +13,25 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/checkin')]
 class CheckinController extends AbstractController
 {
+    #[Route('', methods: ['GET'])]
+    public function index(
+        \App\Repository\CheckinRepository $checkinRepo
+    ): JsonResponse {
+        $checkins = $checkinRepo->findBy([], ['checkinTime' => 'DESC'], 20);
+
+        $data = [];
+        foreach ($checkins as $checkin) {
+            $data[] = [
+                'id'          => $checkin->getId(),
+                'client'      => $checkin->getClient()->getFirstName() . ' ' . $checkin->getClient()->getLastName(),
+                'checkinTime' => $checkin->getCheckinTime()?->format('Y-m-d H:i:s'),
+                'status'      => $checkin->getStatus(),
+            ];
+        }
+
+        return $this->json($data);
+    }
+    
     #[Route('', methods: ['POST'])]
     public function checkin(
         Request $request,
@@ -21,7 +40,6 @@ class CheckinController extends AbstractController
     ): JsonResponse {
 
         $data = json_decode($request->getContent(), true);
-
         $uuid = $data['uuid'] ?? null;
 
         if (!$uuid) {
@@ -39,32 +57,27 @@ class CheckinController extends AbstractController
             ], 404);
         }
 
-        // 🔎 vérifier abonnement
+        // 🔎 vérifier abonnement actif
         $subscription = null;
-        $status = "Aucun abonnement";
 
-        if (!$client->getSubscriptions()->isEmpty()) {
-            $subscription = $client->getSubscriptions()->last();
-
-            if ($subscription->getEndDate() >= new \DateTime()) {
-                $status = "Actif";
-            } else {
-                $status = "Expiré";
+        foreach ($client->getSubscriptions() as $sub) {
+            if ($sub->getEndDate() >= new \DateTime()) {
+                $subscription = $sub;
+                break;
             }
         }
 
-        if ($status !== "Actif") {
+        if (!$subscription) {
             return $this->json([
-                "error" => "Abonnement invalide",
-                "status" => $status
+                "error" => "Aucun abonnement actif"
             ], 403);
         }
 
-        // ✅ enregistrer checkin
+        //  enregistrer checkin 
         $checkin = new Checkin();
         $checkin->setClient($client);
         $checkin->setCheckinTime(new \DateTime());
-        $checkin->setStatus('authorized');
+        $checkin->setStatus('present');
 
         $em->persist($checkin);
         $em->flush();

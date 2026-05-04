@@ -29,6 +29,22 @@ class Order
     #[ORM\Column]
     private ?\DateTime $createdAt = null;
 
+    /// ← NOUVEAU : champs pour gestion livraison
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $deliveryType = null; // 'retrait' ou 'livraison'
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $deliveryAddress = null;
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $deliveryStatus = null; // 'pending', 'preparing', 'shipped', 'delivered'
+
+
+
+    // ← NOUVEAU : ID transaction FedaPay pour traçabilité
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $fedapayTransactionId = null;
+
     /**
      * @var Collection<int, OrderItem>
      */
@@ -44,69 +60,52 @@ class Order
     public function __construct()
     {
         $this->orderItems = new ArrayCollection();
-        $this->payments = new ArrayCollection();
+        $this->payments   = new ArrayCollection();
     }
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
+    public function getId(): ?int { return $this->id; }
 
-    public function getClient(): ?Client
-    {
-        return $this->client;
-    }
-
+    public function getClient(): ?Client { return $this->client; }
     public function setClient(?Client $client): static
     {
         $this->client = $client;
-
         return $this;
     }
 
-    public function getTotalAmount(): ?float
-    {
-        return $this->totalAmount;
-    }
-
+    public function getTotalAmount(): ?float { return $this->totalAmount; }
     public function setTotalAmount(float $totalAmount): static
     {
         $this->totalAmount = $totalAmount;
-
         return $this;
     }
 
-    public function getStatus(): ?string
-    {
-        return $this->status;
-    }
-
+    public function getStatus(): ?string { return $this->status; }
     public function setStatus(string $status): static
     {
         $this->status = $status;
-
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTime
-    {
-        return $this->createdAt;
-    }
-
+    public function getCreatedAt(): ?\DateTime { return $this->createdAt; }
     public function setCreatedAt(\DateTime $createdAt): static
     {
         $this->createdAt = $createdAt;
-
         return $this;
     }
 
-    /**
-     * @return Collection<int, OrderItem>
-     */
-    public function getOrderItems(): Collection
+    // ← NOUVEAU getter/setter fedapayTransactionId
+    public function getFedapayTransactionId(): ?string
     {
-        return $this->orderItems;
+        return $this->fedapayTransactionId;
     }
+
+    public function setFedapayTransactionId(?string $fedapayTransactionId): static
+    {
+        $this->fedapayTransactionId = $fedapayTransactionId;
+        return $this;
+    }
+
+    public function getOrderItems(): Collection { return $this->orderItems; }
 
     public function addOrderItem(OrderItem $orderItem): static
     {
@@ -114,29 +113,20 @@ class Order
             $this->orderItems->add($orderItem);
             $orderItem->setOrders($this);
         }
-
         return $this;
     }
 
     public function removeOrderItem(OrderItem $orderItem): static
     {
         if ($this->orderItems->removeElement($orderItem)) {
-            // set the owning side to null (unless already changed)
             if ($orderItem->getOrders() === $this) {
                 $orderItem->setOrders(null);
             }
         }
-
         return $this;
     }
 
-    /**
-     * @return Collection<int, Payment>
-     */
-    public function getPayments(): Collection
-    {
-        return $this->payments;
-    }
+    public function getPayments(): Collection { return $this->payments; }
 
     public function addPayment(Payment $payment): static
     {
@@ -144,19 +134,53 @@ class Order
             $this->payments->add($payment);
             $payment->setOrders($this);
         }
+        return $this;
+    }
 
+    // ==============================
+    // 🚚 LIVRAISON
+    // ==============================
+
+    public function getDeliveryType(): ?string
+    {
+        return $this->deliveryType;
+    }
+
+    public function setDeliveryType(?string $deliveryType): static
+    {
+        $this->deliveryType = $deliveryType;
+        return $this;
+    }
+
+    public function getDeliveryAddress(): ?string
+    {
+        return $this->deliveryAddress;
+    }
+
+    public function setDeliveryAddress(?string $deliveryAddress): static
+    {
+        $this->deliveryAddress = $deliveryAddress;
+        return $this;
+    }
+
+    public function getDeliveryStatus(): ?string
+    {
+        return $this->deliveryStatus;
+    }
+
+    public function setDeliveryStatus(?string $deliveryStatus): static
+    {
+        $this->deliveryStatus = $deliveryStatus;
         return $this;
     }
 
     public function removePayment(Payment $payment): static
     {
         if ($this->payments->removeElement($payment)) {
-            // set the owning side to null (unless already changed)
             if ($payment->getOrders() === $this) {
                 $payment->setOrders(null);
             }
         }
-
         return $this;
     }
 }
