@@ -7,6 +7,8 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Part\DataPart;
+use Symfony\Component\Mime\Part\File;
 use Twig\Environment;
 use Psr\Log\LoggerInterface;
 
@@ -17,6 +19,7 @@ class MailerService
         private Environment     $twig,
         private string          $projectDir,
         private LoggerInterface $logger,
+        private string          $appBaseUrl,
     ) {}
 
     public function sendQrCodeToClient(Client $client): void
@@ -29,18 +32,17 @@ class MailerService
                 'email'     => $client->getEmail(),
             ]);
 
-            // ← URL publique pour afficher le QR dans le template
-            $qrCodeUrl = 'http://127.0.0.1:8000/' . $client->getQrCode();
+            // ← CID unique : l'image sera embarquée dans l'email
+            // ✅ APRÈS — CID valide avec @
+            $cid = 'qrcode_' . $client->getId() . '@kineticpulse.local';
 
-            // ← Rendu du template avec l'URL publique (pas de CID)
             $html = $this->twig->render('emails/client_qrcode.html.twig', [
                 'client'    => $client,
-                'qrCodeUrl' => $qrCodeUrl,
+                'qrCodeUrl' => 'cid:' . $cid,  // ← le template reçoit "cid:qrcode_XXX"
             ]);
 
-            // ← Créer l'email proprement avec Address()
             $email = (new Email())
-                ->from(new Address('noreply@kineticpulse.com', 'Kinetic Pulse'))
+                ->from(new Address('toffodjiatchade@gmail.com', 'Kinetic Pulse'))
                 ->to(new Address(
                     $client->getEmail(),
                     $client->getFirstName() . ' ' . $client->getLastName()
@@ -48,14 +50,17 @@ class MailerService
                 ->subject('Kinetic Pulse — Votre QR code d\'accès')
                 ->html($html);
 
-            // ← Attacher le QR code en pièce jointe
             if (file_exists($qrCodePath)) {
-                $email->attachFromPath(
-                    $qrCodePath,
-                    'qrcode_acces.png',
-                    'image/png'
+                // ← Image embarquée inline (pas de dépendance URL externe)
+                $email->addPart(
+                    (new DataPart(new File($qrCodePath), 'qrcode_acces.png', 'image/png'))
+                        ->asInline()
+                        ->setContentId($cid)
                 );
-                $this->logger->debug('QR code attaché', ['path' => $qrCodePath]);
+                $this->logger->debug('QR code embarqué en CID', [
+                    'path' => $qrCodePath,
+                    'cid'  => $cid,
+                ]);
             } else {
                 $this->logger->warning('QR code introuvable', ['path' => $qrCodePath]);
             }
@@ -65,17 +70,11 @@ class MailerService
             $this->logger->info('Email envoyé avec succès', [
                 'client_id' => $client->getId(),
             ]);
-
         } catch (TransportExceptionInterface $e) {
-            $this->logger->error('Erreur SMTP', [
-                'error' => $e->getMessage(),
-            ]);
+            $this->logger->error('Erreur SMTP', ['error' => $e->getMessage()]);
             throw new \RuntimeException('Erreur SMTP : ' . $e->getMessage());
-
         } catch (\Exception $e) {
-            $this->logger->error('Erreur envoi email', [
-                'error' => $e->getMessage(),
-            ]);
+            $this->logger->error('Erreur envoi email', ['error' => $e->getMessage()]);
             throw new \RuntimeException('Erreur email : ' . $e->getMessage());
         }
     }

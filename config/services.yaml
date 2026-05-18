@@ -25,6 +25,7 @@ services:
     App\Service\MailerService:
         arguments:
             $projectDir: "%kernel.project_dir%"
+            $appBaseUrl: "%app.base_url%"
             $logger: "@logger"
 
     # Exemple d'override ou service explicite si besoin

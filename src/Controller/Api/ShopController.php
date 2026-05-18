@@ -48,6 +48,19 @@ class ShopController extends AbstractController
         $user->setPassword($hasher->hashPassword($user, $data['password']));
 
         $em->persist($user);
+
+        if (!empty($data['phone'])) {
+            $client = new Client();
+            $client->setFirstName($data['name']);
+            $client->setLastName('');
+            $client->setEmail($data['email']);
+            $client->setPhone($data['phone']);
+            $client->setRegistrationDate(new \DateTime());
+            $client->setUuid(Uuid::v4()->toRfc4122());
+
+            $em->persist($client);
+        }
+
         $em->flush();
 
         $token = $jwt->create($user);
