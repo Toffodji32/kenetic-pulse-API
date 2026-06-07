@@ -1,14 +1,14 @@
 [phases.setup]
-nixPkgs = ["php83", "php83Extensions.pdo", "php83Extensions.pdo_pgsql", "php83Extensions.intl", "php83Extensions.mbstring", "php83Extensions.xml", "php83Extensions.curl", "php83Extensions.gd", "php83Extensions.zip"]
+nixPkgs = ["php83", "php83Extensions.pdo", "php83Extensions.pdo_pgsql", "php83Extensions.intl", "php83Extensions.mbstring", "php83Extensions.xml", "php83Extensions.curl", "php83Extensions.gd", "php83Extensions.zip", "php83Extensions.openssl"]
 
 [phases.install]
 cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
 cmds = [
-    "php bin/console cache:clear --env=prod",
-    "php bin/console cache:warmup --env=prod"
+    "php bin/console cache:clear --env=prod --no-debug",
+    "php bin/console cache:warmup --env=prod --no-debug"
 ]
 
 [start]
-cmd = "php -S 0.0.0.0:$PORT -t public/"
+cmd = "php -S 0.0.0.0:${PORT:-8080} -t public/ public/index.php"
