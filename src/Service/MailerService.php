@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use App\Entity\Client;
+use App\Entity\Subscription;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mime\Address;
@@ -77,5 +78,42 @@ class MailerService
             $this->logger->error('Erreur envoi email', ['error' => $e->getMessage()]);
             throw new \RuntimeException('Erreur email : ' . $e->getMessage());
         }
+    }
+
+    public function sendSubscriptionExpiredMail(Subscription $subscription): void
+    {
+        $client = $subscription->getClient();
+
+        $html = $this->twig->render('emails/subscription_expired.html.twig', [
+            'client'       => $client,
+            'subscription' => $subscription,
+        ]);
+
+        $email = (new Email())
+            ->from(new Address('toffodjiatchade@gmail.com', 'Kinetic Pulse'))
+            ->to(new Address($client->getEmail(), $client->getFirstName() . ' ' . $client->getLastName()))
+            ->subject('Kinetic Pulse — Votre abonnement a expiré')
+            ->html($html);
+
+        $this->mailer->send($email);
+    }
+
+    public function sendSubscriptionReminderMail(Subscription $subscription, int $daysLeft): void
+    {
+        $client = $subscription->getClient();
+
+        $html = $this->twig->render('emails/subscription_reminder.html.twig', [
+            'client'       => $client,
+            'subscription' => $subscription,
+            'daysLeft'     => $daysLeft,
+        ]);
+
+        $email = (new Email())
+            ->from(new Address('toffodjiatchade@gmail.com', 'Kinetic Pulse'))
+            ->to(new Address($client->getEmail(), $client->getFirstName() . ' ' . $client->getLastName()))
+            ->subject("Kinetic Pulse — Votre abonnement expire dans $daysLeft jour(s)")
+            ->html($html);
+
+        $this->mailer->send($email);
     }
 }

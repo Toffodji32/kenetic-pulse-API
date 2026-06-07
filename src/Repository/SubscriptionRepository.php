@@ -16,28 +16,40 @@ class SubscriptionRepository extends ServiceEntityRepository
         parent::__construct($registry, Subscription::class);
     }
 
-    //    /**
-    //     * @return Subscription[] Returns an array of Subscription objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('s.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    // ── 1 seul abonnement par client — le plus récent expiré ─────────────
+    public function findExpired(\DateTime $today): array
+    {
+        return $this->createQueryBuilder('s')
+            ->join('s.client', 'c')
+            ->where('s.endDate < :today')
+            ->setParameter('today', $today)
+            ->andWhere(
+                's.id = (
+                    SELECT MAX(s2.id) FROM App\Entity\Subscription s2
+                    WHERE s2.client = s.client
+                )'
+            )
+            ->orderBy('s.endDate', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 
-    //    public function findOneBySomeField($value): ?Subscription
-    //    {
-    //        return $this->createQueryBuilder('s')
-    //            ->andWhere('s.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    // ── 1 seul abonnement par client — le plus récent expirant bientôt ───
+    public function findExpiringSoon(\DateTime $from, \DateTime $to): array
+    {
+        return $this->createQueryBuilder('s')
+            ->join('s.client', 'c')
+            ->where('s.endDate BETWEEN :from AND :to')
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->andWhere(
+                's.id = (
+                    SELECT MAX(s2.id) FROM App\Entity\Subscription s2
+                    WHERE s2.client = s.client
+                )'
+            )
+            ->orderBy('s.endDate', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }
