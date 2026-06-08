@@ -1,3 +1,4 @@
+# Build v3 - cache cleared 2026-06-08
 FROM php:8.3-cli-alpine
 
 RUN apk add --no-cache \
