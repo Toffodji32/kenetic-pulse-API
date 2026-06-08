@@ -27,7 +27,6 @@ WORKDIR /app
 
 COPY . .
 
-# ← Supprimer vendor s'il existe et réinstaller proprement
 RUN rm -rf vendor
 
 ENV APP_ENV=prod
@@ -37,12 +36,9 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
 
 RUN composer dump-autoload --optimize --no-dev
 
-# Vérifier que vendor existe
 RUN ls -la vendor/autoload.php
-
-RUN php bin/console cache:clear --env=prod --no-debug || true
-RUN php bin/console cache:warmup --env=prod --no-debug || true
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php -S 0.0.0.0:$PORT -t public/ public/index.php"]
+# ← Cache créé au démarrage + serveur lancé
+CMD ["sh", "-c", "php bin/console cache:clear --env=prod --no-debug; php bin/console cache:warmup --env=prod --no-debug; php -S 0.0.0.0:$PORT -t public/ public/index.php"]
