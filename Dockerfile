@@ -28,23 +28,20 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Dossier de travail
 WORKDIR /app
 
-# Copier composer files
-COPY composer.json composer.lock ./
-
-# Installer les dépendances
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
-# Copier tout le reste
+# Copier tout le projet
 COPY . .
 
-# Dump autoload
-RUN composer dump-autoload --optimize --no-dev
-
-# Variables
+# Variables d'environnement AVANT composer install
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
 
-# Cache Symfony
+# ← --no-scripts évite le cache:clear automatique
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Dump autoload manuellement
+RUN composer dump-autoload --optimize --no-dev
+
+# Cache Symfony manuellement APRÈS
 RUN php bin/console cache:clear --env=prod --no-debug || true
 RUN php bin/console cache:warmup --env=prod --no-debug || true
 
