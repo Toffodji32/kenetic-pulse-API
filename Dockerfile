@@ -1,4 +1,4 @@
-# Build v4
+# Build v5
 FROM php:8.3-cli-alpine
 
 RUN apk add --no-cache \
@@ -34,12 +34,8 @@ ENV APP_ENV=prod
 ENV APP_DEBUG=0
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
-
-RUN composer dump-autoload --no-dev --optimize
-
-RUN cp vendor/symfony/runtime/autoload_runtime.template.php vendor/autoload_runtime.php 2>/dev/null || \
-    echo "<?php require __DIR__.'/symfony/runtime/autoload_runtime.php';" > vendor/autoload_runtime.php
+# ← Installer AVEC les scripts pour que symfony/runtime génère autoload_runtime.php
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 RUN ls -la vendor/autoload_runtime.php
 
