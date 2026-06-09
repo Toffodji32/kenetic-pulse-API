@@ -1,4 +1,4 @@
-# Build v3 - cache cleared 2026-06-08
+# Build v4
 FROM php:8.3-cli-alpine
 
 RUN apk add --no-cache \
@@ -32,14 +32,17 @@ RUN rm -rf vendor
 
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-RUN composer dump-autoload --optimize --no-dev
+RUN composer dump-autoload --no-dev --optimize
 
-RUN ls -la vendor/autoload.php
+RUN cp vendor/symfony/runtime/autoload_runtime.template.php vendor/autoload_runtime.php 2>/dev/null || \
+    echo "<?php require __DIR__.'/symfony/runtime/autoload_runtime.php';" > vendor/autoload_runtime.php
+
+RUN ls -la vendor/autoload_runtime.php
 
 EXPOSE 8080
 
-# ← Cache créé au démarrage + serveur lancé
-CMD ["sh", "-c", "php bin/console cache:clear --env=prod --no-debug; php bin/console cache:warmup --env=prod --no-debug; php -S 0.0.0.0:$PORT -t public/ public/index.php"]
+CMD ["sh", "-c", "php -S 0.0.0.0:$PORT -t public/ public/index.php"]
