@@ -10,7 +10,7 @@ nelmio_cors:
             - '^https?://10\.\d+\.\d+\.\d+(:[0-9]+)?$'
             - '^exp://.*$'
             # ← AJOUTER
-            - '^https://kinetic-pulse-three\.vercel\.app$'
+            - '^https://kinetic-pulse-phi\.vercel\.app$'
             - '^https://.*\.vercel\.app$'
 
         allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -31,7 +31,7 @@ nelmio_cors:
                 - '^https?://10\.\d+\.\d+\.\d+(:[0-9]+)?$'
                 - '^exp://.*$'
                 # ← AJOUTER
-                - '^https://kinetic-pulse-three\.vercel\.app$'
+                - '^https://kinetic-pulse-phi\.vercel\.app$'
                 - '^https://.*\.vercel\.app$'
 
             allow_methods: ['GET', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE']
