@@ -68,6 +68,7 @@ class PaymentController extends AbstractController
         $payment->setClient($client);
         $payment->setPaymentMethod($paymentMethod);
         $payment->setPaymentDate(new \DateTime());
+        $payment->setStatus('success');
 
         // ========================
         // 💳 CAS 1 : ABONNEMENT
