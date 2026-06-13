@@ -1,3 +1,7 @@
+[variables]
+APP_ENV = "prod"
+APP_SECRET = "22ece0841d628304275399aa7faed9c0"
+
 [phases.setup]
 nixPkgs = ["php83", "php83Extensions.pdo", "php83Extensions.pdo_pgsql", "php83Extensions.intl", "php83Extensions.mbstring", "php83Extensions.xml", "php83Extensions.curl", "php83Extensions.gd", "php83Extensions.zip", "php83Extensions.openssl"]
 
@@ -6,9 +10,10 @@ cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [phases.build]
 cmds = [
+    "mkdir -p public/qrcodes public/uploads/clients public/uploads/products",
     "php bin/console cache:clear --env=prod --no-debug",
     "php bin/console cache:warmup --env=prod --no-debug"
 ]
 
 [start]
-cmd = "php -S 0.0.0.0:${PORT:-8080} -t public/ public/index.php"
+cmd = "mkdir -p public/qrcodes public/uploads/clients public/uploads/products && php -S 0.0.0.0:${PORT:-8080} -t public/ public/index.php"

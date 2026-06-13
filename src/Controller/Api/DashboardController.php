@@ -18,7 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/dashboard')]
 class DashboardController extends AbstractController
 {
-    #[Route('/', methods: ['GET'])]
+    #[Route('', methods: ['GET'])]
     public function index(
         ClientRepository $clientRepo,
         UserRepository $userRepo,

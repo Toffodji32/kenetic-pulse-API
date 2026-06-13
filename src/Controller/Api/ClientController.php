@@ -131,13 +131,19 @@ class ClientController extends AbstractController
         // ← ENVOI EMAIL avec le QR code
         $emailSent = true;
         $emailError = null;
-        try {
-            $mailerService->sendQrCodeToClient($client);
-        } catch (\Exception $e) {
-            // on ne bloque pas la création si l'email échoue
+        $qrFullPath = $this->getParameter('kernel.project_dir') . '/public/' . $qrPath;
+
+        if (!is_file($qrFullPath)) {
             $emailSent = false;
-            // ✅ Extraire uniquement le message d'erreur (string) pour éviter les problèmes de sérialisation
-            $emailError = (string) $e->getMessage();
+            $emailError = 'Le fichier QR code n\'a pas pu être créé sur le serveur';
+        } else {
+            try {
+                $mailerService->sendQrCodeToClient($client);
+            } catch (\Exception $e) {
+                // on ne bloque pas la création si l'email échoue
+                $emailSent = false;
+                $emailError = (string) $e->getMessage();
+            }
         }
 
         return $this->json([
@@ -208,7 +214,7 @@ class ClientController extends AbstractController
         $publicPath = $projectDir . '/public/qrcodes';
         
         if (!file_exists($publicPath)) {
-            mkdir($publicPath, 0777, true);
+            mkdir($publicPath, 0755, true);
         }
 
         $path = 'qrcodes/client_' . $client->getUuid() . '.png';

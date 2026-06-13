@@ -8,6 +8,12 @@ framework:
     #esi: true
     #fragments: true
 
+when@prod:
+    framework:
+        # Railway / reverse proxy : évite les redirections http:// au lieu de https://
+        trusted_proxies: '0.0.0.0/0'
+        trusted_headers: ['x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-host', 'x-forwarded-port']
+
 when@test:
     framework:
         test: true

@@ -41,4 +41,4 @@ RUN ls -la vendor/autoload_runtime.php
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "mkdir -p config/jwt && printf '%s' \"$JWT_SECRET_KEY\" > config/jwt/private.pem && printf '%s' \"$JWT_PUBLIC_KEY\" > config/jwt/public.pem && php -S 0.0.0.0:$PORT -t public/ public/index.php"]
+CMD ["sh", "-c", "mkdir -p public/qrcodes public/uploads/clients public/uploads/products config/jwt && printf '%s' \"$JWT_SECRET_KEY\" > config/jwt/private.pem && printf '%s' \"$JWT_PUBLIC_KEY\" > config/jwt/public.pem && php -S 0.0.0.0:$PORT -t public/ public/index.php"]
