@@ -1,3 +1,4 @@
+# Build v5
 FROM php:8.3-cli-alpine
 
 RUN apk add --no-cache \
@@ -33,10 +34,11 @@ ENV APP_ENV=prod
 ENV APP_DEBUG=0
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
+# ← Installer AVEC les scripts pour que symfony/runtime génère autoload_runtime.php
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-RUN mkdir -p public/qrcodes public/uploads/clients public/uploads/products
+RUN ls -la vendor/autoload_runtime.php
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t public/ public/index.php"]
+CMD ["sh", "-c", "mkdir -p public/qrcodes public/uploads/clients public/uploads/products config/jwt && printf '%s' \"$JWT_SECRET_KEY\" > config/jwt/private.pem && printf '%s' \"$JWT_PUBLIC_KEY\" > config/jwt/public.pem && php -S 0.0.0.0:$PORT -t public/ public/index.php"]
