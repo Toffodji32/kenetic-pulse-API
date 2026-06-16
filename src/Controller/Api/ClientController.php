@@ -10,7 +10,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
-use App\Service\MailerService; 
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
 
@@ -77,7 +76,7 @@ class ClientController extends AbstractController
     }
 
     #[Route('', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em, MailerService $mailerService ): JsonResponse
+    public function create(Request $request, EntityManagerInterface $em): JsonResponse
     {
         // ✅ Compatible avec FormData (image + champs)
         $data = $request->request->all();
@@ -128,30 +127,10 @@ class ClientController extends AbstractController
         $client->setQrCode($qrPath);
         $em->flush();
 
-        // ← ENVOI EMAIL avec le QR code
-        $emailSent = true;
-        $emailError = null;
-        $qrFullPath = $this->getParameter('kernel.project_dir') . '/public/' . $qrPath;
-
-        if (!is_file($qrFullPath)) {
-            $emailSent = false;
-            $emailError = 'Le fichier QR code n\'a pas pu être créé sur le serveur';
-        } else {
-            try {
-                $mailerService->sendQrCodeToClient($client);
-            } catch (\Exception $e) {
-                // on ne bloque pas la création si l'email échoue
-                $emailSent = false;
-                $emailError = (string) $e->getMessage();
-            }
-        }
-
         return $this->json([
             "message" => "Client créé avec succès",
             "id" => $client->getId(),
             "qrCode" => $client->getQrCode(),
-            "emailSent" => $emailSent,
-            "emailError" => $emailError ? (string) $emailError : null,  // ✅ Force string ou null
         ], 201);
     }
 
