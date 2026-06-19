@@ -43,6 +43,14 @@ RUN mkdir -p public/qrcodes public/uploads/clients public/uploads/products confi
 # .env a été supprimé du repo, Symfony en a besoin pour booter
 RUN touch .env
 
+# Génère les clés JWT pendant le build (plus fiable qu'au runtime)
+ARG JWT_PASSPHRASE=Sauvage19
+ENV JWT_PASSPHRASE=${JWT_PASSPHRASE}
+RUN openssl genpkey -algorithm RSA -out config/jwt/private.pem -aes-256-cbc \
+    -pass pass:${JWT_PASSPHRASE} -pkeyopt rsa_keygen_bits:4096
+RUN openssl pkey -in config/jwt/private.pem -passin pass:${JWT_PASSPHRASE} \
+    -out config/jwt/public.pem -pubout
+
 RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8080
