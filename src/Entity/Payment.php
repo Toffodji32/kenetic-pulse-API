@@ -53,6 +53,10 @@ class Payment
     #[ORM\Column(length: 20)]
     private ?string $status = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Gym $gym = null;
+
     // ========================
     // 🔧 GETTERS / SETTERS
     // ========================
@@ -147,6 +151,17 @@ class Payment
     public function setStatus(string $status): static
     {
         $this->status = $status;
+        return $this;
+    }
+
+    public function getGym(): ?Gym
+    {
+        return $this->gym;
+    }
+
+    public function setGym(?Gym $gym): static
+    {
+        $this->gym = $gym;
         return $this;
     }
 }

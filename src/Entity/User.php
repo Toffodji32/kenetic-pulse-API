@@ -41,6 +41,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\ManyToOne]
     private ?Role $role = null;
 
+    #[ORM\ManyToOne(inversedBy: 'users')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Gym $gym = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -158,6 +162,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRole(?Role $role): static
     {
         $this->role = $role;
+
+        return $this;
+    }
+
+    public function getGym(): ?Gym
+    {
+        return $this->gym;
+    }
+
+    public function setGym(?Gym $gym): static
+    {
+        $this->gym = $gym;
 
         return $this;
     }

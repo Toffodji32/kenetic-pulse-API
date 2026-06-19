@@ -15,7 +15,7 @@ class Subscription
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'subscriptionType')]
+    #[ORM\ManyToOne(inversedBy: 'subscriptions')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Client $client = null;
 
@@ -34,6 +34,10 @@ class Subscription
 
     #[ORM\Column(length: 50)]
     private ?string $status = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Gym $gym = null;
 
     /**
      * @var Collection<int, Payment>
@@ -149,6 +153,18 @@ class Subscription
                 $payment->setSubscription(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getGym(): ?Gym
+    {
+        return $this->gym;
+    }
+
+    public function setGym(?Gym $gym): static
+    {
+        $this->gym = $gym;
 
         return $this;
     }

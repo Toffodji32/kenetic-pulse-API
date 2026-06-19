@@ -22,6 +22,10 @@ class Category
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Gym $gym = null;
+
     /**
      * @var Collection<int, Product>
      */
@@ -87,6 +91,18 @@ class Category
                 $product->setCategory(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getGym(): ?Gym
+    {
+        return $this->gym;
+    }
+
+    public function setGym(?Gym $gym): static
+    {
+        $this->gym = $gym;
 
         return $this;
     }

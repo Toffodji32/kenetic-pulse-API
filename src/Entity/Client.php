@@ -52,6 +52,9 @@ class Client
     #[ORM\Column(nullable: true)]
     private ?bool $isActive = true;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Gym $gym = null;
 
     /**
      * @var Collection<int, Subscription>
@@ -381,4 +384,15 @@ class Client
         return $this;
     }
 
+    public function getGym(): ?Gym
+    {
+        return $this->gym;
+    }
+
+    public function setGym(?Gym $gym): static
+    {
+        $this->gym = $gym;
+
+        return $this;
+    }
 }
