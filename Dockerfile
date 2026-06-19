@@ -32,9 +32,13 @@ COPY . .
 RUN rm -rf vendor
 
 ENV APP_ENV=prod
-ENV APP_DEBUG=1
+ENV APP_DEBUG=0
 ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV APP_SECRET=ChangeMeInProduction
+ENV DEFAULT_URI=https://kenetic-pulse-api.onrender.com
+ENV APP_BASE_URL=https://kenetic-pulse-api.onrender.com
+ENV MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
+ENV MAILER_DSN=null://null
 
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
