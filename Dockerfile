@@ -40,6 +40,9 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
 
 RUN mkdir -p public/qrcodes public/uploads/clients public/uploads/products config/jwt
 
+# .env a été supprimé du repo, Symfony en a besoin pour booter
+RUN touch .env
+
 RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8080
