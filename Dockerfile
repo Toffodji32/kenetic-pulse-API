@@ -55,4 +55,4 @@ RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8080
 
-ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t public/ public/index.php"]
