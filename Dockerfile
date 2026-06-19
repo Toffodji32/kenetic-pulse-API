@@ -34,8 +34,9 @@ RUN rm -rf vendor
 ENV APP_ENV=prod
 ENV APP_DEBUG=0
 ENV COMPOSER_ALLOW_SUPERUSER=1
+ENV APP_SECRET=ChangeMeInProduction
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 RUN mkdir -p public/qrcodes public/uploads/clients public/uploads/products config/jwt
 
