@@ -6,9 +6,11 @@ use App\Repository\GymOwnerRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: GymOwnerRepository::class)]
-class GymOwner
+class GymOwner implements PasswordAuthenticatedUserInterface, UserInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -121,5 +123,19 @@ class GymOwner
             }
         }
         return $this;
+    }
+
+    public function getRoles(): array
+    {
+        return ['ROLE_GYM_OWNER'];
+    }
+
+    public function getUserIdentifier(): string
+    {
+        return $this->email ?? '';
+    }
+
+    public function eraseCredentials(): void
+    {
     }
 }
