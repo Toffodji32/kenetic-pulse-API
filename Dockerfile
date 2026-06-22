@@ -59,4 +59,4 @@ RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8080} -t public/ public/index.php"]
+CMD ["sh", "-c", "php bin/console doctrine:migrations:migrate --env=prod --no-interaction --allow-no-migration 2>&1 || echo 'Migration skipped or failed, starting server...'; php -S 0.0.0.0:${PORT:-8080} -t public/ public/index.php"]
