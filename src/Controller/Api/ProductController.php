@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Product;
 use App\Repository\CategoryRepository;
 use App\Repository\ProductRepository;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,13 +16,22 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 #[Route('/api/products')]
 class ProductController extends AbstractController
 {
+    public function __construct(
+        private GymResolver $gymResolver,
+    ) {}
+
     // ── LISTE ─────────────────────────────────────────────────────────────
     #[Route('', methods: ['GET'])]
     public function index(ProductRepository $productRepo): JsonResponse
     {
+        $gym = $this->gymResolver->getGym();
+        $products = $gym
+            ? $productRepo->findBy(['gym' => $gym])
+            : $productRepo->findAll();
+
         return $this->json(array_map(
             fn($p) => $this->formatProduct($p),
-            $productRepo->findAll()
+            $products
         ));
     }
 
@@ -50,7 +60,13 @@ class ProductController extends AbstractController
             return $this->json(['error' => 'name, price et quantity requis'], 400);
         }
 
+        $gym = $this->gymResolver->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée'], 400);
+        }
+
         $product = new Product();
+        $product->setGym($gym);
         $product->setName($name);
         $product->setDescription($description);
         $product->setPrice((float) $price);
@@ -88,13 +104,18 @@ class ProductController extends AbstractController
         Product $product,
         Request $request,
         EntityManagerInterface $em,
-        CategoryRepository $categoryRepo   // ← AJOUTÉ
+        CategoryRepository $categoryRepo
     ): JsonResponse {
+        $gym = $this->gymResolver->getGym();
+        if (!$gym || $product->getGym()->getId() !== $gym->getId()) {
+            return $this->json(['error' => 'Produit non trouvé'], 404);
+        }
+
         $name         = $request->request->get('name');
         $price        = $request->request->get('price');
         $quantity     = $request->request->get('quantity');
         $description  = $request->request->get('description');
-        $categoryName = $request->request->get('category');  // ← AJOUTÉ
+        $categoryName = $request->request->get('category');
         $imageFile    = $request->files->get('image');
 
         if ($name)             $product->setName($name);
@@ -145,6 +166,11 @@ class ProductController extends AbstractController
     #[Route('/{id}', methods: ['DELETE'])]
     public function delete(Product $product, EntityManagerInterface $em): JsonResponse
     {
+        $gym = $this->gymResolver->getGym();
+        if (!$gym || $product->getGym()->getId() !== $gym->getId()) {
+            return $this->json(['error' => 'Produit non trouvé'], 404);
+        }
+
         if ($product->getImage()) {
             $path = $this->getParameter('upload_directory') . '/' . basename($product->getImage());
             if (file_exists($path)) {
@@ -164,6 +190,11 @@ class ProductController extends AbstractController
         Request $request,
         EntityManagerInterface $em
     ): JsonResponse {
+        $gym = $this->gymResolver->getGym();
+        if (!$gym || $product->getGym()->getId() !== $gym->getId()) {
+            return $this->json(['error' => 'Produit non trouvé'], 404);
+        }
+
         $data     = json_decode($request->getContent(), true);
         $quantity = $data['quantity'] ?? 1;
 
