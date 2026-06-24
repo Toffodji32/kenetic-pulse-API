@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Uid\Uuid;
 
 #[Route('/api/shop/{gymSlug}')]
 class GymShopController extends AbstractController
@@ -122,6 +123,7 @@ class GymShopController extends AbstractController
         $client->setLastName('');
         $client->setEmail($email);
         $client->setPhone($phone ?? '');
+        $client->setUuid(Uuid::v4()->toRfc4122());
         $client->setGym($gym);
         $client->setRegistrationDate(new \DateTime());
         $this->em->persist($client);
@@ -177,6 +179,7 @@ class GymShopController extends AbstractController
             $client->setLastName('');
             $client->setEmail($user->getEmail());
             $client->setPhone('');
+            $client->setUuid(Uuid::v4()->toRfc4122());
             $client->setGym($gym);
             $client->setRegistrationDate(new \DateTime());
             $this->em->persist($client);
