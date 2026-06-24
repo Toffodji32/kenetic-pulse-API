@@ -52,6 +52,7 @@ class GymProfileController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['name'])) $gym->setName($data['name']);
+        if (isset($data['slug'])) $gym->setSlug($data['slug']);
         if (isset($data['email'])) $gym->setEmail($data['email']);
         if (isset($data['phone'])) $gym->setPhone($data['phone']);
         if (isset($data['address'])) $gym->setAddress($data['address']);
