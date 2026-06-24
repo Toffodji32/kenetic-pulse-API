@@ -82,11 +82,11 @@ class ProductController extends AbstractController
 
         // ── Image ──────────────────────────────────────────────────────────
         if ($imageFile) {
-            $newFilename = $this->uploadImage($imageFile);
-            if (!$newFilename) {
+            $base64 = $this->uploadImageAsBase64($imageFile);
+            if (!$base64) {
                 return $this->json(['error' => 'Erreur upload image'], 500);
             }
-            $product->setImage('/uploads/' . $newFilename);
+            $product->setImage($base64);
         }
 
         $em->persist($product);
@@ -140,18 +140,11 @@ class ProductController extends AbstractController
 
         // ── Image ──────────────────────────────────────────────────────────
         if ($imageFile) {
-            // Supprimer l'ancienne image
-            if ($product->getImage()) {
-                $oldPath = $this->getParameter('upload_directory') . '/' . basename($product->getImage());
-                if (file_exists($oldPath)) {
-                    unlink($oldPath);
-                }
-            }
-            $newFilename = $this->uploadImage($imageFile);
-            if (!$newFilename) {
+            $base64 = $this->uploadImageAsBase64($imageFile);
+            if (!$base64) {
                 return $this->json(['error' => 'Erreur upload image'], 500);
             }
-            $product->setImage('/uploads/' . $newFilename);
+            $product->setImage($base64);
         }
 
         $em->flush();
@@ -171,12 +164,6 @@ class ProductController extends AbstractController
             return $this->json(['error' => 'Produit non trouvé'], 404);
         }
 
-        if ($product->getImage()) {
-            $path = $this->getParameter('upload_directory') . '/' . basename($product->getImage());
-            if (file_exists($path)) {
-                unlink($path);
-            }
-        }
         $em->remove($product);
         $em->flush();
 
@@ -227,22 +214,15 @@ class ProductController extends AbstractController
         ];
     }
 
-    // ── UPLOAD IMAGE ──────────────────────────────────────────────────────
-    private function uploadImage($imageFile): ?string
+    // ── UPLOAD IMAGE AS BASE64 ────────────────────────────────────────────
+    private function uploadImageAsBase64($imageFile): ?string
     {
         $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
         if (!in_array($imageFile->getMimeType(), $allowedTypes)) {
             return null;
         }
 
-        $newFilename = uniqid('product_', true) . '.' . $imageFile->guessExtension();
-
-        try {
-            $imageFile->move($this->getParameter('upload_directory'), $newFilename);
-        } catch (FileException $e) {
-            return null;
-        }
-
-        return $newFilename;
+        $base64 = base64_encode(file_get_contents($imageFile->getPathname()));
+        return sprintf('data:%s;base64,%s', $imageFile->getMimeType(), $base64);
     }
 }
