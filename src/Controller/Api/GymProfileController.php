@@ -29,7 +29,9 @@ class GymProfileController extends AbstractController
         }
 
         return $this->json([
+            'id' => $gym->getId(),
             'name' => $gym->getName(),
+            'slug' => $gym->getSlug(),
             'email' => $gym->getEmail(),
             'phone' => $gym->getPhone(),
             'address' => $gym->getAddress(),
@@ -58,7 +60,9 @@ class GymProfileController extends AbstractController
         $this->em->flush();
 
         return $this->json([
+            'id' => $gym->getId(),
             'name' => $gym->getName(),
+            'slug' => $gym->getSlug(),
             'email' => $gym->getEmail(),
             'phone' => $gym->getPhone(),
             'address' => $gym->getAddress(),
