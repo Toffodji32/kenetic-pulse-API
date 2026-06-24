@@ -38,6 +38,7 @@ class GymSubscriptionCheckListener
             '/api/gym/register',
             '/api/gym/subscription',
             '/api/shop',
+            '/api/super-admin',
         ];
 
         foreach ($allowedPaths as $allowed) {
@@ -55,6 +56,11 @@ class GymSubscriptionCheckListener
         $user = $token->getUser();
 
         if (!$user instanceof \App\Entity\User) {
+            return;
+        }
+
+        // Super admin bypass
+        if (in_array('ROLE_SUPER_ADMIN', $user->getRoles(), true)) {
             return;
         }
 

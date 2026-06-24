@@ -34,6 +34,11 @@ class GymFilterListener
             return;
         }
 
+        // Super admin sees all data — no gym filter
+        if (in_array('ROLE_SUPER_ADMIN', $user->getRoles())) {
+            return;
+        }
+
         $gym = $user->getGym();
 
         if (!$gym) {

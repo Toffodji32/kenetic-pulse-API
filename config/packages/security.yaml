@@ -5,6 +5,10 @@ security:
         App\Entity\GymOwner:
             algorithm: auto
 
+    role_hierarchy:
+        ROLE_SUPER_ADMIN: ROLE_ADMIN
+        ROLE_ADMIN: ROLE_USER
+
     providers:
         app_user_provider:
             entity:
@@ -58,6 +62,9 @@ security:
 
         # Boutique client connecté
         - { path: ^/api/shop/orders,      roles: ROLE_CLIENT }
+
+        # Super admin
+        - { path: ^/api/super-admin,      roles: ROLE_SUPER_ADMIN }
 
         # Tout le reste → connecté
         - { path: ^/api,                  roles: IS_AUTHENTICATED_FULLY }
