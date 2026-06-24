@@ -42,9 +42,12 @@ security:
         # Gym registration (SaaS)
         - { path: ^/api/gym/register,     roles: PUBLIC_ACCESS }
 
-        # Boutique publique
-        - { path: ^/api/shop/register,    roles: PUBLIC_ACCESS }
-        - { path: ^/api/shop/products,    roles: PUBLIC_ACCESS, methods: [GET] }
+        # Boutique publique (globale et par salle)
+        - { path: ^/api/shop/register,             roles: PUBLIC_ACCESS }
+        - { path: ^/api/shop/products,             roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/shop/[^/]+/products,       roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/shop/[^/]+/categories,     roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/shop/[^/]+/register,       roles: PUBLIC_ACCESS }
 
         # Produits publics en lecture
         - { path: ^/api/products,         roles: PUBLIC_ACCESS, methods: [GET] }

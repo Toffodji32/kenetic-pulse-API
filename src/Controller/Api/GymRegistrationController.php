@@ -76,6 +76,7 @@ class GymRegistrationController extends AbstractController
             $subscription->setGym($gym);
             $subscription->setStatus(GymSubscription::STATUS_TRIAL);
             $subscription->setPlan('monthly');
+            $subscription->setPlanType('premium');
             $subscription->setTrialEndsAt($trialEndsAt);
             $subscription->setAmount(15000);
             $this->em->persist($subscription);

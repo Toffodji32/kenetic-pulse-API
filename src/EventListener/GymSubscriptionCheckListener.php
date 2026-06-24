@@ -37,6 +37,7 @@ class GymSubscriptionCheckListener
             '/api/login',
             '/api/gym/register',
             '/api/gym/subscription',
+            '/api/shop',
         ];
 
         foreach ($allowedPaths as $allowed) {
@@ -54,6 +55,11 @@ class GymSubscriptionCheckListener
         $user = $token->getUser();
 
         if (!$user instanceof \App\Entity\User) {
+            return;
+        }
+
+        // Ne bloquer que les administrateurs, pas les clients boutique
+        if (!in_array('ROLE_ADMIN', $user->getRoles(), true)) {
             return;
         }
 

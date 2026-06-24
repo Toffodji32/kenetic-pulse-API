@@ -46,6 +46,7 @@ class GymSubscriptionController extends AbstractController
 
         return $this->json([
             'status' => $subscription->getStatus(),
+            'planType' => $subscription->getPlanType(),
             'plan' => $subscription->getPlan(),
             'trialEndsAt' => $subscription->getTrialEndsAt()?->format('Y-m-d H:i:s'),
             'startsAt' => $subscription->getStartsAt()?->format('Y-m-d H:i:s'),
@@ -73,37 +74,45 @@ class GymSubscriptionController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         $fedapayTransactionId = $data['fedapayTransactionId'] ?? null;
+        $planType = $data['plan_type'] ?? 'basic';
+
+        if (!in_array($planType, ['basic', 'premium'], true)) {
+            return new JsonResponse(['error' => 'plan_type doit être basic ou premium'], 400);
+        }
 
         if (!$fedapayTransactionId) {
             return new JsonResponse(['error' => 'fedapayTransactionId requis'], 400);
         }
 
-        // Vérification FedaPay (réutilise la logique existante)
+        // Vérification FedaPay
         $verified = $this->verifyFedaPayTransaction($fedapayTransactionId);
 
         if (!$verified) {
             return new JsonResponse(['error' => 'Transaction FedaPay non approuvée'], 400);
         }
 
+        $amount = $planType === 'premium' ? 25000 : 15000;
         $now = new \DateTime();
 
         if ($subscription->getStatus() === GymSubscription::STATUS_ACTIVE && $subscription->getEndsAt() > $now) {
-            // Renouvellement anticipé : prolonge à partir de l'ancien endsAt
             $newEndsAt = (clone $subscription->getEndsAt())->modify('+1 month');
             $subscription->setEndsAt($newEndsAt);
         } else {
-            // Nouvel abonnement ou réactivation
             $subscription->setStatus(GymSubscription::STATUS_ACTIVE);
             $subscription->setStartsAt($now);
             $subscription->setEndsAt((clone $now)->modify('+1 month'));
         }
 
+        $subscription->setPlanType($planType);
+        $subscription->setAmount($amount);
         $subscription->setFedapayTransactionId($fedapayTransactionId);
         $subscription->setUpdatedAt($now);
         $this->em->flush();
 
         return $this->json([
             'status' => $subscription->getStatus(),
+            'planType' => $subscription->getPlanType(),
+            'plan' => $subscription->getPlan(),
             'startsAt' => $subscription->getStartsAt()?->format('Y-m-d H:i:s'),
             'endsAt' => $subscription->getEndsAt()?->format('Y-m-d H:i:s'),
             'amount' => $subscription->getAmount(),

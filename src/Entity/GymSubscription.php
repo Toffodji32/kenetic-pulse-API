@@ -28,6 +28,9 @@ class GymSubscription
     #[ORM\Column(length: 20)]
     private ?string $plan = null;
 
+    #[ORM\Column(length: 20, options: ["default" => "premium"])]
+    private ?string $planType = 'premium';
+
     #[ORM\Column]
     private ?\DateTime $trialEndsAt = null;
 
@@ -89,6 +92,17 @@ class GymSubscription
     public function setPlan(string $plan): static
     {
         $this->plan = $plan;
+        return $this;
+    }
+
+    public function getPlanType(): ?string
+    {
+        return $this->planType;
+    }
+
+    public function setPlanType(string $planType): static
+    {
+        $this->planType = $planType;
         return $this;
     }
 
