@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\Category;
 use App\Repository\CategoryRepository;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -13,14 +14,29 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/categories')]
 class CategoryController extends AbstractController
 {
+    public function __construct(
+        private GymResolver $gymResolver,
+    ) {}
+
     #[Route('', methods: ['GET'])]
     public function index(CategoryRepository $repo): JsonResponse
     {
+        $gym = $this->gymResolver->getGym();
+        if ($gym) {
+            $categories = $repo->createQueryBuilder('c')
+                ->where('c.gym = :gym OR c.gym IS NULL')
+                ->setParameter('gym', $gym)
+                ->getQuery()
+                ->getResult();
+        } else {
+            $categories = $repo->findAll();
+        }
+
         return $this->json(array_map(fn($c) => [
             'id'          => $c->getId(),
             'name'        => $c->getName(),
             'description' => $c->getDescription(),
-        ], $repo->findAll()));
+        ], $categories));
     }
 
     #[Route('', methods: ['POST'])]
@@ -33,8 +49,13 @@ class CategoryController extends AbstractController
             return $this->json(['error' => 'Nom obligatoire'], 400);
         }
 
-        // vérifier si la catégorie existe déjà
-        $existing = $em->getRepository(Category::class)->findOneBy(['name' => $data['name']]);
+        $gym = $this->gymResolver->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée'], 400);
+        }
+
+        // vérifier si la catégorie existe déjà dans cette salle
+        $existing = $em->getRepository(Category::class)->findOneBy(['name' => $data['name'], 'gym' => $gym]);
         if ($existing) {
             return $this->json(['error' => 'Cette catégorie existe déjà'], 409);
         }
@@ -42,6 +63,7 @@ class CategoryController extends AbstractController
         $category = new Category();
         $category->setName($data['name']);
         $category->setDescription($data['description'] ?? null);
+        $category->setGym($gym);
         $em->persist($category);
         $em->flush();
 
@@ -56,6 +78,13 @@ class CategoryController extends AbstractController
 
         if (isset($data['name']))        $category->setName($data['name']);
         if (isset($data['description'])) $category->setDescription($data['description']);
+
+        // Associer la catégorie à la salle si pas déjà fait
+        if (!$category->getGym()) {
+            $gym = $this->gymResolver->getGym();
+            if ($gym) $category->setGym($gym);
+        }
+
         $em->flush();
 
         return $this->json(['message' => 'Catégorie modifiée']);

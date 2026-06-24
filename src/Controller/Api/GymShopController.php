@@ -67,7 +67,11 @@ class GymShopController extends AbstractController
         }
 
         $categories = $this->em->getRepository(\App\Entity\Category::class)
-            ->findBy(['gym' => $gym]);
+            ->createQueryBuilder('c')
+            ->where('c.gym = :gym OR c.gym IS NULL')
+            ->setParameter('gym', $gym)
+            ->getQuery()
+            ->getResult();
 
         $data = array_map(function (\App\Entity\Category $c) {
             return [
