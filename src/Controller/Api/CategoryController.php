@@ -21,22 +21,11 @@ class CategoryController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function index(CategoryRepository $repo): JsonResponse
     {
-        $gym = $this->gymResolver->getGym();
-        if ($gym) {
-            $categories = $repo->createQueryBuilder('c')
-                ->where('c.gym = :gym OR c.gym IS NULL')
-                ->setParameter('gym', $gym)
-                ->getQuery()
-                ->getResult();
-        } else {
-            $categories = $repo->findAll();
-        }
-
         return $this->json(array_map(fn($c) => [
             'id'          => $c->getId(),
             'name'        => $c->getName(),
             'description' => $c->getDescription(),
-        ], $categories));
+        ], $repo->findAll()));
     }
 
     #[Route('', methods: ['POST'])]
