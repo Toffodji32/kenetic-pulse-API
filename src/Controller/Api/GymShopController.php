@@ -118,11 +118,12 @@ class GymShopController extends AbstractController
         $this->em->persist($user);
 
         $client = new Client();
-        $client->setName($name);
+        $client->setFirstName($name);
+        $client->setLastName('');
         $client->setEmail($email);
-        $client->setPhone($phone);
+        $client->setPhone($phone ?? '');
         $client->setGym($gym);
-        $client->setCreatedAt(new \DateTime());
+        $client->setRegistrationDate(new \DateTime());
         $this->em->persist($client);
 
         $this->em->flush();
@@ -175,6 +176,7 @@ class GymShopController extends AbstractController
             $client->setFirstName($user->getName());
             $client->setLastName('');
             $client->setEmail($user->getEmail());
+            $client->setPhone('');
             $client->setGym($gym);
             $client->setRegistrationDate(new \DateTime());
             $this->em->persist($client);
