@@ -27,83 +27,102 @@ class SuperAdminController extends AbstractController
 {
     #[Route('/dashboard', methods: ['GET'])]
     public function dashboard(
-        ClientRepository $clientRepo,
-        UserRepository $userRepo,
-        ProductRepository $productRepo,
-        OrderRepository $orderRepo,
-        PaymentRepository $paymentRepo,
-        SubscriptionRepository $subRepo,
-        CheckinRepository $checkinRepo,
         GymRepository $gymRepo,
         GymSubscriptionRepository $gymSubRepo,
+        ClientRepository $clientRepo,
+        UserRepository $userRepo,
     ): JsonResponse {
+        $now = new \DateTime();
+        $today = new \DateTime('today');
+        $firstOfMonth = new \DateTime('first day of this month 00:00:00');
+        $in7Days = (new \DateTime())->modify('+7 days');
+
+        // Total gyms
         $totalGyms = $gymRepo->count([]);
 
-        // Gyms created this month
-        $firstOfMonth = new \DateTime('first day of this month 00:00:00');
-        $newGymsThisMonth = $gymRepo->createQueryBuilder('g')
+        // New gyms this month / today
+        $newGymsThisMonth = (int) $gymRepo->createQueryBuilder('g')
             ->select('COUNT(g.id)')
-            ->where('g.createdAt >= :firstOfMonth')
-            ->setParameter('firstOfMonth', $firstOfMonth)
+            ->where('g.createdAt >= :start')
+            ->setParameter('start', $firstOfMonth)
             ->getQuery()
             ->getSingleScalarResult();
 
-        // Gym subscriptions by status
+        $newGymsToday = (int) $gymRepo->createQueryBuilder('g')
+            ->select('COUNT(g.id)')
+            ->where('g.createdAt >= :today')
+            ->setParameter('today', $today)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Subscription status counts
         $trialGyms = $gymSubRepo->count(['status' => GymSubscription::STATUS_TRIAL]);
         $activeGyms = $gymSubRepo->count(['status' => GymSubscription::STATUS_ACTIVE]);
         $expiredGyms = $gymSubRepo->count(['status' => GymSubscription::STATUS_EXPIRED]);
 
-        // Total revenue from gym subscriptions
-        $subscriptionRevenue = $gymSubRepo->createQueryBuilder('gs')
+        // MRR = sum of all active subscription amounts
+        $mrr = (float) $gymSubRepo->createQueryBuilder('gs')
             ->select('COALESCE(SUM(gs.amount), 0)')
-            ->where('gs.status = :active')
-            ->setParameter('active', GymSubscription::STATUS_ACTIVE)
+            ->where('gs.status = :status')
+            ->setParameter('status', GymSubscription::STATUS_ACTIVE)
             ->getQuery()
             ->getSingleScalarResult();
 
+        // All-time subscription revenue (active + expired payments)
+        $totalRevenue = (float) $gymSubRepo->createQueryBuilder('gs')
+            ->select('COALESCE(SUM(gs.amount), 0)')
+            ->where('gs.status IN (:statuses)')
+            ->setParameter('statuses', [GymSubscription::STATUS_ACTIVE, GymSubscription::STATUS_EXPIRED])
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Trials expiring in the next 7 days
+        $trialsExpiringSoon = (int) $gymSubRepo->createQueryBuilder('gs')
+            ->select('COUNT(gs.id)')
+            ->where('gs.status = :trial')
+            ->andWhere('gs.trialEndsAt <= :end')
+            ->andWhere('gs.trialEndsAt >= :now')
+            ->setParameter('trial', GymSubscription::STATUS_TRIAL)
+            ->setParameter('end', $in7Days)
+            ->setParameter('now', $now)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Global counts
         $totalClients = $clientRepo->count([]);
         $totalUsers = $userRepo->count([]);
-        $totalProducts = $productRepo->count([]);
 
-        $today = new \DateTime('today');
-
-        $todayRevenue = $orderRepo->createQueryBuilder('o')
-            ->select('COALESCE(SUM(o.totalAmount), 0)')
-            ->where('o.createdAt >= :today')
-            ->setParameter('today', $today)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        $totalOrders = $orderRepo->count([]);
-
-        $todayCheckins = $checkinRepo->createQueryBuilder('c')
-            ->select('COUNT(c.id)')
-            ->where('c.checkinTime >= :today')
-            ->setParameter('today', $today)
-            ->getQuery()
-            ->getSingleScalarResult();
+        // 5 most recent gyms
+        $recentGyms = $gymRepo->findBy([], ['createdAt' => 'DESC'], 5);
+        $recentGymsData = array_map(fn(Gym $g) => [
+            'id' => $g->getId(),
+            'name' => $g->getName(),
+            'slug' => $g->getSlug(),
+            'email' => $g->getEmail(),
+            'createdAt' => $g->getCreatedAt()?->format('c'),
+            'subscription' => $g->getGymSubscription() ? [
+                'status' => $g->getGymSubscription()->getStatus(),
+                'planType' => $g->getGymSubscription()->getPlanType(),
+            ] : null,
+        ], $recentGyms);
 
         return $this->json([
             'gyms' => [
                 'total' => $totalGyms,
-                'newThisMonth' => (int) $newGymsThisMonth,
+                'newThisMonth' => $newGymsThisMonth,
+                'newToday' => $newGymsToday,
                 'trial' => $trialGyms,
                 'active' => $activeGyms,
                 'expired' => $expiredGyms,
             ],
+            'subscriptions' => [
+                'mrr' => $mrr,
+                'totalRevenue' => $totalRevenue,
+                'trialsExpiringSoon' => $trialsExpiringSoon,
+            ],
             'clients' => ['total' => $totalClients],
             'users' => ['total' => $totalUsers],
-            'products' => ['total' => $totalProducts],
-            'orders' => [
-                'total' => $totalOrders,
-                'todayRevenue' => (float) $todayRevenue,
-            ],
-            'subscriptions' => [
-                'revenue' => (float) $subscriptionRevenue,
-            ],
-            'checkins' => [
-                'today' => (int) $todayCheckins,
-            ],
+            'recentGyms' => $recentGymsData,
         ]);
     }
 
