@@ -16,7 +16,7 @@ class GymResolver
     {
         $token = $this->tokenStorage->getToken();
 
-        if (!$token || !$token->isAuthenticated()) {
+        if (!$token || !$token->getUser()) {
             return null;
         }
 
