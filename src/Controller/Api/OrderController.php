@@ -196,6 +196,7 @@ class OrderController extends AbstractController
             $payment = new Payment();
             $payment->setClient($order->getClient());
             $payment->setOrders($order);
+            $payment->setGym($order->getGym());
             $payment->setAmount($order->getTotalAmount());
             $payment->setPaymentDate(new \DateTime());
             $payment->setStatus('confirmed');
