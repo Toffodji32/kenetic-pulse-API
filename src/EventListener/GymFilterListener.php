@@ -3,12 +3,12 @@
 namespace App\EventListener;
 
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Symfony\Component\HttpKernel\Event\RequestEvent;
+use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
-#[AsEventListener(event: KernelEvents::REQUEST, priority: 10)]
+#[AsEventListener(event: KernelEvents::CONTROLLER, priority: 10)]
 class GymFilterListener
 {
     public function __construct(
@@ -16,7 +16,7 @@ class GymFilterListener
         private EntityManagerInterface $em,
     ) {}
 
-    public function onKernelRequest(RequestEvent $event): void
+    public function onKernelController(ControllerEvent $event): void
     {
         if (!$event->isMainRequest()) {
             return;
@@ -24,7 +24,7 @@ class GymFilterListener
 
         $token = $this->tokenStorage->getToken();
 
-        if (!$token || !$token->isAuthenticated()) {
+        if (!$token || !$token->getUser()) {
             return;
         }
 
