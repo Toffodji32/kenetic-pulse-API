@@ -53,6 +53,7 @@ class SubscriptionController extends AbstractController
         $subscription->setEndDate($endDate);
         $subscription->setStatus($status);
         $subscription->setPrice($type->getPrice());
+        $subscription->setGym($client->getGym());
 
         $em->persist($subscription);
         $em->flush();
