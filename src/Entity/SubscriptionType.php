@@ -24,6 +24,10 @@ class SubscriptionType
     #[ORM\Column]
     private ?int $durationDays = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Gym $gym = null;
+
     /**
      * @var Collection<int, Subscription>
      */
@@ -79,6 +83,17 @@ class SubscriptionType
     /**
      * @return Collection<int, Subscription>
      */
+    public function getGym(): ?Gym
+    {
+        return $this->gym;
+    }
+
+    public function setGym(?Gym $gym): static
+    {
+        $this->gym = $gym;
+        return $this;
+    }
+
     public function getSubscriptions(): Collection
     {
         return $this->subscriptions;
