@@ -23,7 +23,7 @@ RUN apk add --no-cache \
     opcache \
     gd
 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ ENV APP_BASE_URL=https://kenetic-pulse-api.onrender.com
 ENV MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
 ENV MAILER_DSN=null://null
 
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-audit
 
 RUN mkdir -p public/qrcodes public/uploads/clients public/uploads/products config/jwt
 
