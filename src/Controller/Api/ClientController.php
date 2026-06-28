@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\Client;
 use App\Repository\ClientRepository;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -76,7 +77,7 @@ class ClientController extends AbstractController
     }
 
     #[Route('', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em): JsonResponse
+    public function create(Request $request, EntityManagerInterface $em, GymResolver $gymResolver): JsonResponse
     {
         // ✅ Compatible avec FormData (image + champs)
         $data = $request->request->all();
@@ -93,7 +94,13 @@ class ClientController extends AbstractController
             ], 400);
         }
 
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return new JsonResponse(['error' => 'Aucune salle associée'], 403);
+        }
+
         $client = new Client();
+        $client->setGym($gym);
 
         $client->setFirstName($data['firstName']);
         $client->setLastName($data['lastName']);

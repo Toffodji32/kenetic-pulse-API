@@ -6,6 +6,7 @@ use App\Entity\Subscription;
 use App\Repository\ClientRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTypeRepository;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,7 +22,8 @@ class SubscriptionController extends AbstractController
         Request $request,
         ClientRepository $clientRepository,
         SubscriptionTypeRepository $typeRepository,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        GymResolver $gymResolver,
     ): JsonResponse {
 
         $data     = json_decode($request->getContent(), true);
@@ -46,6 +48,11 @@ class SubscriptionController extends AbstractController
         $endDate   = (clone $startDate)->modify('+' . $type->getDurationDays() . ' days');
         $status    = ($endDate >= new \DateTime()) ? 'actif' : 'expire';
 
+        $gym = $client->getGym() ?? $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée'], 403);
+        }
+
         $subscription = new Subscription();
         $subscription->setClient($client);
         $subscription->setSubscriptionType($type);
@@ -53,7 +60,7 @@ class SubscriptionController extends AbstractController
         $subscription->setEndDate($endDate);
         $subscription->setStatus($status);
         $subscription->setPrice($type->getPrice());
-        $subscription->setGym($client->getGym());
+        $subscription->setGym($gym);
 
         $em->persist($subscription);
         $em->flush();
@@ -98,11 +105,19 @@ class SubscriptionController extends AbstractController
 
     // ── RENEW ─────────────────────────────────────────────────────────────
     #[Route('/{id}/renew', methods: ['POST'])]
-    public function renew(Subscription $oldSubscription, EntityManagerInterface $em): JsonResponse
-    {
+    public function renew(
+        Subscription $oldSubscription,
+        EntityManagerInterface $em,
+        GymResolver $gymResolver,
+    ): JsonResponse {
         $type      = $oldSubscription->getSubscriptionType();
         $startDate = new \DateTime();
         $endDate   = (clone $startDate)->modify('+' . $type->getDurationDays() . ' days');
+
+        $gym = $oldSubscription->getGym() ?? $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée'], 403);
+        }
 
         $newSubscription = new Subscription();
         $newSubscription->setClient($oldSubscription->getClient());
@@ -111,6 +126,7 @@ class SubscriptionController extends AbstractController
         $newSubscription->setEndDate($endDate);
         $newSubscription->setPrice($type->getPrice());
         $newSubscription->setStatus('actif');
+        $newSubscription->setGym($gym);
 
         $em->persist($newSubscription);
         $em->flush();
