@@ -127,10 +127,16 @@ class ShopController extends AbstractController
             return $this->json(['error' => 'Adresse de livraison requise'], 400);
         }
 
+        $gym = $user->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée à votre compte'], 403);
+        }
+
         $client = $clientRepo->findOneBy(['email' => $user->getEmail()]);
 
         if (!$client) {
             $client = new Client();
+            $client->setGym($gym);
             $client->setFirstName($user->getName());
             $client->setLastName('');
             $client->setEmail($user->getEmail());
@@ -142,6 +148,7 @@ class ShopController extends AbstractController
         }
 
         $order = new Order();
+        $order->setGym($gym);
         $order->setClient($client);
         $order->setCreatedAt(new \DateTime());
         $order->setStatus('pending');
