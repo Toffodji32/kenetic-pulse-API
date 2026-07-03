@@ -122,8 +122,8 @@ class GymSubscriptionController extends AbstractController
 
     private function verifyFedaPayTransaction(string $transactionId): bool
     {
-        $apiKey = $_ENV['FEDAPAY_SECRET_KEY'] ?? '';
-        $env = $_ENV['FEDAPAY_ENV'] ?? 'sandbox';
+        $apiKey = $_SERVER['FEDAPAY_SECRET_KEY'] ?? $_ENV['FEDAPAY_SECRET_KEY'] ?? '';
+        $env = $_SERVER['FEDAPAY_ENV'] ?? $_ENV['FEDAPAY_ENV'] ?? 'sandbox';
         $baseUrl = $env === 'production'
             ? 'https://api.fedapay.com/v1'
             : 'https://sandbox-api.fedapay.com/v1';
