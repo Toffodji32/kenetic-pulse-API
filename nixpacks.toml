@@ -1,6 +1,8 @@
 [variables]
 APP_ENV = "prod"
 APP_SECRET = "22ece0841d628304275399aa7faed9c0"
+FEDAPAY_SECRET_KEY = "sk_sandbox_ymFzMM3g7lgDLLjNbte5txWx"
+FEDAPAY_ENV = "sandbox"
 
 [phases.setup]
 nixPkgs = ["php83", "php83Extensions.pdo", "php83Extensions.pdo_pgsql", "php83Extensions.intl", "php83Extensions.mbstring", "php83Extensions.xml", "php83Extensions.curl", "php83Extensions.gd", "php83Extensions.zip", "php83Extensions.openssl"]
