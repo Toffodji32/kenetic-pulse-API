@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use App\Entity\Payment;
 use App\Entity\Subscription;
 use App\Repository\ClientRepository;
 use App\Repository\SubscriptionRepository;
@@ -63,6 +64,22 @@ class SubscriptionController extends AbstractController
         $subscription->setGym($gym);
 
         $em->persist($subscription);
+
+        // Si un mode de paiement est fourni, créer un paiement
+        $paymentMethod = $data['payment_method'] ?? null;
+        if ($paymentMethod) {
+            $payment = new Payment();
+            $payment->setGym($gym);
+            $payment->setClient($client);
+            $payment->setSubscription($subscription);
+            $payment->setAmount($type->getPrice());
+            $payment->setPaymentMethod($paymentMethod);
+            $payment->setPaymentDate(new \DateTime());
+            $payment->setStatus('success');
+            $payment->setReference('SUB-' . uniqid());
+            $em->persist($payment);
+        }
+
         $em->flush();
 
         return $this->json([
@@ -106,10 +123,13 @@ class SubscriptionController extends AbstractController
     // ── RENEW ─────────────────────────────────────────────────────────────
     #[Route('/{id}/renew', methods: ['POST'])]
     public function renew(
+        Request $request,
         Subscription $oldSubscription,
         EntityManagerInterface $em,
         GymResolver $gymResolver,
     ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
         $type      = $oldSubscription->getSubscriptionType();
         $startDate = new \DateTime();
         $endDate   = (clone $startDate)->modify('+' . $type->getDurationDays() . ' days');
@@ -119,8 +139,10 @@ class SubscriptionController extends AbstractController
             return $this->json(['error' => 'Aucune salle associée'], 403);
         }
 
+        $client = $oldSubscription->getClient();
+
         $newSubscription = new Subscription();
-        $newSubscription->setClient($oldSubscription->getClient());
+        $newSubscription->setClient($client);
         $newSubscription->setSubscriptionType($type);
         $newSubscription->setStartDate($startDate);
         $newSubscription->setEndDate($endDate);
@@ -129,6 +151,21 @@ class SubscriptionController extends AbstractController
         $newSubscription->setGym($gym);
 
         $em->persist($newSubscription);
+
+        $paymentMethod = $data['payment_method'] ?? null;
+        if ($paymentMethod) {
+            $payment = new Payment();
+            $payment->setGym($gym);
+            $payment->setClient($client);
+            $payment->setSubscription($newSubscription);
+            $payment->setAmount($type->getPrice());
+            $payment->setPaymentMethod($paymentMethod);
+            $payment->setPaymentDate(new \DateTime());
+            $payment->setStatus('success');
+            $payment->setReference('SUB-' . uniqid());
+            $em->persist($payment);
+        }
+
         $em->flush();
 
         return $this->json([

@@ -6,6 +6,7 @@ use App\Entity\Payment;
 use App\Repository\ClientRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\OrderRepository;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,7 +22,8 @@ class PaymentController extends AbstractController
         ClientRepository $clientRepo,
         SubscriptionRepository $subscriptionRepo,
         OrderRepository $orderRepo,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        GymResolver $gymResolver,
     ): JsonResponse {
 
         $data = json_decode($request->getContent(), true);
@@ -64,7 +66,13 @@ class PaymentController extends AbstractController
             ], 404);
         }
 
+        $gym = $client->getGym() ?? $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée'], 403);
+        }
+
         $payment = new Payment();
+        $payment->setGym($gym);
         $payment->setClient($client);
         $payment->setPaymentMethod($paymentMethod);
         $payment->setPaymentDate(new \DateTime());
