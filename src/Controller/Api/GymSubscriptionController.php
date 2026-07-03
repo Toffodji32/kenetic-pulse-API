@@ -137,19 +137,27 @@ class GymSubscriptionController extends AbstractController
                     'Content-Type: application/json',
                     'Accept: application/json',
                 ],
-                CURLOPT_TIMEOUT => 10,
+                CURLOPT_TIMEOUT => 15,
             ]);
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($httpCode !== 200) {
+            if ($httpCode !== 200 || !$response) {
                 return false;
             }
 
             $data = json_decode($response, true);
 
-            return isset($data['transaction']['status']) && $data['transaction']['status'] === 'approved';
+            // FedaPay API response: {"v1/transaction": {"id": ..., "status": "approved", ...}}
+            // or for list endpoints: {"success": true, "transactions": [...]}
+            $tx = $data['v1/transaction'] ?? $data['transaction'] ?? null;
+
+            if (!$tx && isset($data['klass']) && str_starts_with($data['klass'], 'v1/transaction')) {
+                $tx = $data;
+            }
+
+            return $tx && isset($tx['status']) && $tx['status'] === 'approved';
         } catch (\Exception $e) {
             return false;
         }
