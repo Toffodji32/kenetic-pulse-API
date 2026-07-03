@@ -109,12 +109,16 @@ class GymSubscriptionController extends AbstractController
         $subscription->setUpdatedAt($now);
         $this->em->flush();
 
+        $endsAt = $subscription->getEndsAt();
+        $daysLeft = $endsAt && $endsAt > $now ? (int) $now->diff($endsAt)->days : null;
+
         return $this->json([
             'status' => $subscription->getStatus(),
             'planType' => $subscription->getPlanType(),
             'plan' => $subscription->getPlan(),
             'startsAt' => $subscription->getStartsAt()?->format('Y-m-d H:i:s'),
-            'endsAt' => $subscription->getEndsAt()?->format('Y-m-d H:i:s'),
+            'endsAt' => $endsAt?->format('Y-m-d H:i:s'),
+            'daysLeft' => $daysLeft,
             'amount' => $subscription->getAmount(),
             'fedapayTransactionId' => $subscription->getFedapayTransactionId(),
         ]);
