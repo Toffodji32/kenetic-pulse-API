@@ -18,6 +18,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -305,5 +306,53 @@ class SuperAdminController extends AbstractController
         ], $all);
 
         return $this->json($data);
+    }
+
+    #[Route('/profile', methods: ['GET'])]
+    public function getProfile(): JsonResponse
+    {
+        $user = $this->getUser();
+
+        return $this->json([
+            'id'    => $user->getId(),
+            'name'  => $user->getName(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
+        ]);
+    }
+
+    #[Route('/profile', methods: ['PUT'])]
+    public function updateProfile(
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher,
+        EntityManagerInterface $em,
+    ): JsonResponse {
+        $user = $this->getUser();
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['name'])) {
+            $user->setName($data['name']);
+        }
+
+        if (isset($data['email'])) {
+            $user->setEmail($data['email']);
+        }
+
+        if (isset($data['current_password']) && isset($data['new_password'])) {
+            if (!$passwordHasher->isPasswordValid($user, $data['current_password'])) {
+                return $this->json(['error' => 'Mot de passe actuel incorrect'], 400);
+            }
+
+            $user->setPassword($passwordHasher->hashPassword($user, $data['new_password']));
+        }
+
+        $em->flush();
+
+        return $this->json([
+            'id'    => $user->getId(),
+            'name'  => $user->getName(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
+        ]);
     }
 }
