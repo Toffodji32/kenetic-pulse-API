@@ -121,6 +121,9 @@ class GymRegistrationController extends AbstractController
     private function generateUniqueSlug(string $name): string
     {
         $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/', '-', $name), '-'));
+        if ($slug === '') {
+            $slug = 'gym';
+        }
         $baseSlug = $slug;
         $counter = 1;
 
