@@ -3,10 +3,12 @@
 namespace App\Controller\Api;
 
 use App\Entity\Client;
+use App\Entity\Gym;
 use App\Entity\Order;
 use App\Entity\OrderItem;
 use App\Entity\User;
 use App\Repository\ClientRepository;
+use App\Repository\GymRepository;
 use App\Repository\OrderRepository;
 use App\Repository\ProductRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,12 +29,22 @@ class ShopController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         UserPasswordHasherInterface $hasher,
-        JWTTokenManagerInterface $jwt
+        JWTTokenManagerInterface $jwt,
+        GymRepository $gymRepo,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
         if (empty($data['name']) || empty($data['email']) || empty($data['password'])) {
             return $this->json(['error' => 'Tous les champs sont obligatoires'], 400);
+        }
+
+        if (empty($data['gym_slug'])) {
+            return $this->json(['error' => 'gym_slug requis'], 400);
+        }
+
+        $gym = $gymRepo->findOneBySlug($data['gym_slug']);
+        if (!$gym) {
+            return $this->json(['error' => 'Salle de sport introuvable'], 404);
         }
 
         $existing = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
@@ -41,6 +53,7 @@ class ShopController extends AbstractController
         }
 
         $user = new User();
+        $user->setGym($gym);
         $user->setName($data['name']);
         $user->setEmail($data['email']);
         $user->setRoles(['ROLE_CLIENT']);
@@ -51,6 +64,7 @@ class ShopController extends AbstractController
 
         if (!empty($data['phone'])) {
             $client = new Client();
+            $client->setGym($gym);
             $client->setFirstName($data['name']);
             $client->setLastName('');
             $client->setEmail($data['email']);

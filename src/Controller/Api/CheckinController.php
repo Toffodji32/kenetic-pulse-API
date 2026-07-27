@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\Checkin;
 use App\Repository\ClientRepository;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -13,6 +14,10 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/api/checkin')]
 class CheckinController extends AbstractController
 {
+    public function __construct(
+        private GymResolver $gymResolver,
+    ) {}
+
     #[Route('', methods: ['GET'])]
     public function index(
         \App\Repository\CheckinRepository $checkinRepo
@@ -74,7 +79,13 @@ class CheckinController extends AbstractController
         }
 
         //  enregistrer checkin 
+        $gym = $client->getGym() ?? $this->gymResolver->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée'], 403);
+        }
+
         $checkin = new Checkin();
+        $checkin->setGym($gym);
         $checkin->setClient($client);
         $checkin->setCheckinTime(new \DateTime());
         $checkin->setStatus('present');

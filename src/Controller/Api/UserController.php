@@ -3,6 +3,7 @@
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -50,7 +51,8 @@ class UserController extends AbstractController
     public function create(
         Request $request,
         EntityManagerInterface $em,
-        UserPasswordHasherInterface $hasher
+        UserPasswordHasherInterface $hasher,
+        GymResolver $gymResolver,
     ): JsonResponse {
         // ← protection admin
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -67,7 +69,13 @@ class UserController extends AbstractController
             return new JsonResponse(['error' => 'Cet email est déjà utilisé'], 409);
         }
 
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return new JsonResponse(['error' => 'Aucune salle associée'], 403);
+        }
+
         $user = new User();
+        $user->setGym($gym);
         $user->setName($data["name"]);
         $user->setEmail($data["email"]);
         $user->setCreatedAt(new \DateTime());

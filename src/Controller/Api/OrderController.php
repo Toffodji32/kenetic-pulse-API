@@ -8,6 +8,7 @@ use App\Entity\Payment;
 use App\Repository\ClientRepository;
 use App\Repository\ProductRepository;
 use App\Repository\OrderRepository;
+use App\Security\GymResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,7 +23,8 @@ class OrderController extends AbstractController
         Request $request,
         ClientRepository $clientRepo,
         ProductRepository $productRepo,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        GymResolver $gymResolver,
     ): JsonResponse {
         $data     = json_decode($request->getContent(), true);
         $clientId = $data['client_id'] ?? null;
@@ -37,7 +39,13 @@ class OrderController extends AbstractController
             return $this->json(["error" => "Client introuvable"], 404);
         }
 
+        $gym = $client->getGym() ?? $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json(['error' => 'Aucune salle associée'], 403);
+        }
+
         $order = new Order();
+        $order->setGym($gym);
         $order->setClient($client);
         $order->setCreatedAt(new \DateTime());
         $order->setStatus('pending');
