@@ -9,6 +9,7 @@ use App\Repository\ClientRepository;
 use App\Repository\ProductRepository;
 use App\Repository\OrderRepository;
 use App\Security\GymResolver;
+use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -185,7 +186,8 @@ class OrderController extends AbstractController
     #[Route('/{id}/validate', methods: ['POST'])]
     public function validate(
         Order $order,
-        EntityManagerInterface $em
+        EntityManagerInterface $em,
+        WalletService $walletService
     ): JsonResponse {
         if ($order->getStatus() === 'paid') {
             return $this->json(["error" => "Commande déjà validée"], 400);
@@ -196,7 +198,6 @@ class OrderController extends AbstractController
 
         $order->setStatus('paid');
 
-        // ← NOUVEAU : créer le paiement automatiquement si pas déjà existant
         $existingPayment = $em->getRepository(Payment::class)
             ->findOneBy(['orders' => $order]);
 
@@ -209,19 +210,34 @@ class OrderController extends AbstractController
             $payment->setPaymentDate(new \DateTime());
             $payment->setStatus('confirmed');
 
-            // si commande boutique FedaPay → mobile_money, sinon especes
             $method = $order->getFedapayTransactionId()
                 ? 'mobile_money'
                 : 'especes';
             $payment->setPaymentMethod($method);
 
-            // référence traçable
             $reference = $order->getFedapayTransactionId()
                 ? 'FEDAPAY-' . $order->getFedapayTransactionId()
                 : 'ORD-' . $order->getId() . '-' . uniqid();
             $payment->setReference($reference);
 
             $em->persist($payment);
+
+            // Créditer le wallet pour les paiements cash (commission 0%)
+            // Les paiements FedaPay sont crédités via le webhook
+            if (!$order->getFedapayTransactionId()) {
+                $gym = $order->getGym();
+                if ($gym) {
+                    $amount = (int) $order->getTotalAmount();
+                    $walletService->credit(
+                        $gym,
+                        $amount,
+                        'ORD-' . $order->getId(),
+                        'Paiement espèce — commande #' . $order->getId(),
+                        [],
+                        0 // commission 0% pour cash
+                    );
+                }
+            }
         }
 
         $em->flush();

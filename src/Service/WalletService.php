@@ -28,9 +28,9 @@ class WalletService
         return $wallet;
     }
 
-    public function credit(Gym $gym, int $amount, string $reference, string $description, array $metadata = []): GymWallet
+    public function credit(Gym $gym, int $amount, string $reference, string $description, array $metadata = [], ?int $commissionOverride = null): GymWallet
     {
-        return $this->em->wrapInTransaction(fn() => $this->doCredit($gym, $amount, $reference, $description, $metadata));
+        return $this->em->wrapInTransaction(fn() => $this->doCredit($gym, $amount, $reference, $description, $metadata, $commissionOverride));
     }
 
     public function debit(Gym $gym, int $amount, string $reference, string $description): GymWallet
@@ -94,11 +94,12 @@ class WalletService
         });
     }
 
-    private function doCredit(Gym $gym, int $amount, string $reference, string $description, array $metadata = []): GymWallet
+    private function doCredit(Gym $gym, int $amount, string $reference, string $description, array $metadata = [], ?int $commissionOverride = null): GymWallet
     {
         $wallet = $this->getOrCreateWallet($gym);
 
-        $commission = (int) round($amount * $this->commissionRate / 100);
+        $rate = $commissionOverride ?? $this->commissionRate;
+        $commission = (int) round($amount * $rate / 100);
         $netAmount = $amount - $commission;
 
         $balanceBefore = $wallet->getBalanceAvailable();
@@ -112,7 +113,7 @@ class WalletService
             $commTx->setBalanceBefore(0);
             $commTx->setBalanceAfter(0);
             $commTx->setReference($reference);
-            $commTx->setDescription('Commission plateforme ' . $this->commissionRate . '% sur ' . $description);
+            $commTx->setDescription('Commission plateforme ' . $rate . '% sur ' . $description);
             $commTx->setMetadata($metadata);
             $this->em->persist($commTx);
         }
