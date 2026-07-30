@@ -7,11 +7,12 @@ import { useAuthStore } from '@/stores/auth'
 const routes = [
   { path: '/', redirect: '/wallet' },
   { path: '/login', name: 'login', component: LoginView },
+  { path: '/client', name: 'client', component: () => import('@/views/ClientPlaceholder.vue') },
   {
     path: '/wallet',
     name: 'wallet',
     component: WalletView,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
     path: '/superadmin/withdrawals',
@@ -29,13 +30,16 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
   if (to.path === '/login' && auth.token) {
-    return next('/wallet')
+    return next(auth.isAdmin ? '/wallet' : '/client')
   }
   if (to.meta.requiresAuth && !auth.token) {
     return next('/login')
   }
   if (to.meta.requiresSuperAdmin && !auth.user?.roles?.includes('ROLE_SUPER_ADMIN')) {
     return next('/wallet')
+  }
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return next('/client')
   }
   next()
 })

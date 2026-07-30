@@ -1,8 +1,12 @@
 <template>
   <div id="kinetic-app">
-    <nav v-if="isLoggedIn" class="nav">
+    <nav v-if="isAdmin" class="nav">
       <router-link to="/wallet" class="nav-link">Wallet</router-link>
       <router-link v-if="isSuperAdmin" to="/superadmin/withdrawals" class="nav-link">Retraits</router-link>
+      <button @click="logout" class="btn-logout">Déconnexion</button>
+    </nav>
+    <nav v-else-if="isLoggedIn" class="nav">
+      <router-link to="/client" class="nav-link">Mon espace</router-link>
       <button @click="logout" class="btn-logout">Déconnexion</button>
     </nav>
     <main class="main">
@@ -19,6 +23,7 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 const isLoggedIn = computed(() => !!auth.token)
+const isAdmin = computed(() => auth.isAdmin)
 const isSuperAdmin = computed(() => auth.user?.roles?.includes('ROLE_SUPER_ADMIN'))
 
 function logout() {
