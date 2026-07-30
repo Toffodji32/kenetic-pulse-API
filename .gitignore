@@ -26,3 +26,7 @@
 
 # QR codes g�n�r�s
 /public/qrcodes/
+
+# Frontend
+/frontend/node_modules/
+/frontend/dist/
