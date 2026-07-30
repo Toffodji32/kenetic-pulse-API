@@ -7,6 +7,7 @@ use App\Repository\ClientRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\OrderRepository;
 use App\Security\GymResolver;
+use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,6 +25,7 @@ class PaymentController extends AbstractController
         OrderRepository $orderRepo,
         EntityManagerInterface $em,
         GymResolver $gymResolver,
+        WalletService $walletService,
     ): JsonResponse {
 
         $data = json_decode($request->getContent(), true);
@@ -133,6 +135,23 @@ class PaymentController extends AbstractController
         // ========================
         $em->persist($payment);
         $em->flush();
+
+        // ========================
+        // 💰 CRÉDITER LE WALLET
+        // ========================
+        $alreadyCredited = $em->getRepository(\App\Entity\WalletTransaction::class)
+            ->findOneBy(['reference' => $payment->getReference(), 'type' => 'credit']);
+        if (!$alreadyCredited) {
+            $label = $subscriptionId ? 'Paiement abonnement' : 'Paiement commande';
+            $walletService->credit(
+                $gym,
+                (int) $payment->getAmount(),
+                $payment->getReference(),
+                $label . ' — #' . ($subscriptionId ?? $orderId),
+                [],
+                0
+            );
+        }
 
         return $this->json([
             "message" => "Paiement enregistré avec succès",
