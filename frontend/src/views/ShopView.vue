@@ -7,8 +7,16 @@
       </button>
     </header>
 
+    <div v-if="!gymSlug" class="alert alert-error">
+      Impossible de déterminer votre salle de sport. <button class="btn btn-sm" @click="refresh">Reconnectez-vous</button>
+    </div>
+
+    <div v-else-if="loading" class="empty">Chargement des produits...</div>
+
+    <div v-else-if="loadError" class="alert alert-error">{{ loadError }}</div>
+
     <!-- Product grid -->
-    <div class="product-grid" v-if="products.length">
+    <div class="product-grid" v-else-if="products.length">
       <div v-for="p in products" :key="p.id" class="product-card card">
         <div class="product-img" v-if="p.image">
           <img :src="p.image" :alt="p.name" />
@@ -30,7 +38,7 @@
         </div>
       </div>
     </div>
-    <div v-else class="empty">Aucun produit disponible pour le moment.</div>
+    <div v-else class="empty">Aucun produit disponible pour le moment dans cette salle.</div>
 
     <!-- Cart drawer -->
     <div v-if="showCart" class="modal-overlay" @click.self="showCart = false">
@@ -100,11 +108,36 @@ const deliveryAddress = ref('')
 const orderLoading = ref(false)
 const orderError = ref('')
 const orderSuccess = ref(false)
+const loading = ref(true)
+const loadError = ref('')
 
 const cartTotalItems = computed(() => cart.value.reduce((s, i) => s + i.quantity, 0))
 const cartTotal = computed(() => cart.value.reduce((s, i) => s + i.price * i.quantity, 0))
 
 function formatPrice(v) { return (v || 0).toLocaleString('fr-FR') + ' FCFA' }
+
+async function fetchProducts() {
+  if (!gymSlug.value) {
+    loading.value = false
+    loadError.value = 'Aucune salle de sport associée à votre compte.'
+    return
+  }
+  loading.value = true
+  loadError.value = ''
+  try {
+    const { data } = await API.get(`/api/shop/${gymSlug.value}/products`)
+    products.value = data
+  } catch (e) {
+    loadError.value = 'Erreur lors du chargement des produits : ' + (e.response?.data?.error || e.message)
+  } finally {
+    loading.value = false
+  }
+}
+
+function refresh() {
+  auth.logout()
+  window.location.href = '/login'
+}
 
 function addToCart(p) {
   const existing = cart.value.find(i => i.id === p.id)
@@ -146,12 +179,10 @@ async function submitOrder() {
 }
 
 onMounted(async () => {
-  try {
-    const { data } = await API.get(`/api/shop/${gymSlug.value}/products`)
-    products.value = data
-  } catch (e) {
-    console.error('Erreur chargement produits', e)
+  if (!gymSlug.value) {
+    await auth.refreshUser()
   }
+  await fetchProducts()
 })
 </script>
 
@@ -180,4 +211,6 @@ onMounted(async () => {
 .cart-item-total { font-weight: 600; }
 .cart-total { text-align: right; padding: .75rem 0; font-size: 1.1rem; }
 .btn-danger { background: #ef4444; color: #fff; border: none; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.alert { padding: .75rem 1rem; border-radius: 8px; font-size: .9rem; }
+.alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 </style>

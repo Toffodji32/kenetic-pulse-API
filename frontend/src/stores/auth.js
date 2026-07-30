@@ -51,5 +51,16 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  return { token, user, isAuthenticated, isSuperAdmin, setAuth, login, logout }
+  async function refreshUser() {
+    if (!token.value) return
+    try {
+      const { data } = await API.get('/me')
+      user.value = data
+      localStorage.setItem('user', JSON.stringify(data))
+    } catch {
+      logout()
+    }
+  }
+
+  return { token, user, isAuthenticated, isSuperAdmin, setAuth, login, logout, refreshUser }
 })
