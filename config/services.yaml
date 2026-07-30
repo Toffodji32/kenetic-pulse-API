@@ -5,6 +5,8 @@ parameters:
     # Paramètres personnalisés
     upload_directory: "%kernel.project_dir%/public/uploads"
     app.base_url: "%env(APP_BASE_URL)%"
+    platform_commission_rate: "%env(int:PLATFORM_COMMISSION_RATE)%"
+    withdrawal_min_amount: "%env(int:WITHDRAWAL_MIN_AMOUNT)%"
 
 services:
     # default configuration for services in *this* file
@@ -31,6 +33,10 @@ services:
             $projectDir: "%kernel.project_dir%"
             $appBaseUrl: "%app.base_url%"
             $logger: "@logger"
+
+    App\Service\WalletService:
+        arguments:
+            $commissionRate: "%platform_commission_rate%"
 
     # Exemple d'override ou service explicite si besoin
     # App\Service\MyService:

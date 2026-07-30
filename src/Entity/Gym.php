@@ -46,6 +46,9 @@ class Gym
     #[ORM\OneToOne(targetEntity: GymSubscription::class, mappedBy: 'gym', cascade: ['persist', 'remove'])]
     private ?GymSubscription $gymSubscription = null;
 
+    #[ORM\OneToOne(targetEntity: GymWallet::class, mappedBy: 'gym', cascade: ['persist', 'remove'])]
+    private ?GymWallet $gymWallet = null;
+
     #[ORM\OneToMany(targetEntity: User::class, mappedBy: 'gym')]
     private Collection $users;
 
@@ -167,6 +170,17 @@ class Gym
     public function setGymSubscription(?GymSubscription $gymSubscription): static
     {
         $this->gymSubscription = $gymSubscription;
+        return $this;
+    }
+
+    public function getGymWallet(): ?GymWallet
+    {
+        return $this->gymWallet;
+    }
+
+    public function setGymWallet(?GymWallet $gymWallet): static
+    {
+        $this->gymWallet = $gymWallet;
         return $this;
     }
 

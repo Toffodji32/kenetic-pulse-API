@@ -116,4 +116,14 @@ class MailerService
 
         $this->mailer->send($email);
     }
+
+    public function sendRaw(Email $email): void
+    {
+        try {
+            $this->mailer->send($email);
+        } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
+            $this->logger->error('SMTP error sending raw email', ['error' => $e->getMessage()]);
+            throw new \RuntimeException('Erreur SMTP : ' . $e->getMessage());
+        }
+    }
 }

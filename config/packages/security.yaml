@@ -63,8 +63,12 @@ security:
         # Boutique client connecté
         - { path: ^/api/shop/orders,      roles: ROLE_CLIENT }
 
+        # Webhooks FedaPay (public — no JWT)
+        - { path: ^/api/webhooks/fedapay, roles: PUBLIC_ACCESS }
+
         # Super admin
         - { path: ^/api/super-admin,      roles: ROLE_SUPER_ADMIN }
+        - { path: ^/api/superadmin,       roles: ROLE_SUPER_ADMIN }
 
         # Tout le reste → connecté
         - { path: ^/api,                  roles: IS_AUTHENTICATED_FULLY }
