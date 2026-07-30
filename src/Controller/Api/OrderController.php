@@ -222,20 +222,22 @@ class OrderController extends AbstractController
 
             $em->persist($payment);
 
-            // Créditer le wallet pour les paiements cash (commission 0%)
-            // Les paiements FedaPay sont crédités via le webhook
+            // Créditer le wallet si pas déjà fait (évite double-credit)
             if (!$order->getFedapayTransactionId()) {
-                $gym = $order->getGym();
-                if ($gym) {
-                    $amount = (int) $order->getTotalAmount();
-                    $walletService->credit(
-                        $gym,
-                        $amount,
-                        'ORD-' . $order->getId(),
-                        'Paiement espèce — commande #' . $order->getId(),
-                        [],
-                        0 // commission 0% pour cash
-                    );
+                $alreadyCredited = $em->getRepository(\App\Entity\WalletTransaction::class)
+                    ->findOneBy(['reference' => 'ORD-' . $order->getId(), 'type' => 'credit']);
+                if (!$alreadyCredited) {
+                    $gym = $order->getGym();
+                    if ($gym) {
+                        $walletService->credit(
+                            $gym,
+                            (int) $order->getTotalAmount(),
+                            'ORD-' . $order->getId(),
+                            'Paiement espèce — commande #' . $order->getId(),
+                            [],
+                            0
+                        );
+                    }
                 }
             }
         }

@@ -7,6 +7,7 @@ use App\Entity\Gym;
 use App\Entity\Order;
 use App\Entity\OrderItem;
 use App\Entity\User;
+use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -145,7 +146,7 @@ class GymShopController extends AbstractController
 
     #[Route('/orders', name: 'api_gym_shop_orders', methods: ['POST'])]
     #[IsGranted(new Expression("is_granted('ROLE_CLIENT') or is_granted('ROLE_ADMIN')"))]
-    public function createOrder(Request $request, string $gymSlug): JsonResponse
+    public function createOrder(Request $request, string $gymSlug, WalletService $walletService): JsonResponse
     {
         $gym = $this->resolveGym($gymSlug);
         if (!$gym) {
@@ -233,6 +234,18 @@ class GymShopController extends AbstractController
         }
 
         $this->em->flush();
+
+        // Créditer le wallet pour les paiements cash (commission 0%)
+        if (!$fedapayTransactionId) {
+            $walletService->credit(
+                $gym,
+                (int) $totalAmount,
+                'ORD-' . $order->getId(),
+                'Paiement espèce — commande boutique #' . $order->getId(),
+                [],
+                0
+            );
+        }
 
         return $this->json([
             'order_id' => $order->getId(),

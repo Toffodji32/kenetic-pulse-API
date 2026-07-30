@@ -11,6 +11,7 @@ use App\Repository\ClientRepository;
 use App\Repository\GymRepository;
 use App\Repository\OrderRepository;
 use App\Repository\ProductRepository;
+use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -119,6 +120,7 @@ class ShopController extends AbstractController
         ProductRepository $productRepo,
         ClientRepository $clientRepo,
         EntityManagerInterface $em,
+        WalletService $walletService,
         #[CurrentUser] ?User $user
     ): JsonResponse {
         if (!$user) {
@@ -213,10 +215,26 @@ class ShopController extends AbstractController
         }
 
         $total += $deliveryFee;
+        $total += $deliveryFee;
         $order->setTotalAmount($total);
 
         $em->persist($order);
         $em->flush();
+
+        // Créditer le wallet pour les paiements cash
+        if (!$fedapayId) {
+            $gym = $user->getGym();
+            if ($gym) {
+                $walletService->credit(
+                    $gym,
+                    $total,
+                    'ORD-' . $order->getId(),
+                    'Paiement espèce — commande #' . $order->getId(),
+                    [],
+                    0
+                );
+            }
+        }
 
         return $this->json([
             'message'                => 'Commande passée avec succès',
@@ -225,7 +243,6 @@ class ShopController extends AbstractController
             'delivery_type'          => $deliveryType,
             'delivery_address'       => $deliveryAddress,
             'status'                 => 'pending',
-            // ← NOUVEAU : retourner l'ID pour confirmation côté Vue
             'fedapay_transaction_id' => $order->getFedapayTransactionId(),
         ], 201);
     }
