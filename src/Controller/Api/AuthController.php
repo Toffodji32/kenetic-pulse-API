@@ -47,13 +47,17 @@ class AuthController extends AbstractController
 
         $token = $this->jwtManager->create($user);
 
+        $gym = $user->getGym();
+
         return new JsonResponse([
             'token' => $token,
             'user' => [
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),
                 'name' => $user->getName(),
-                'roles' => $user->getRoles()
+                'roles' => $user->getRoles(),
+                'gym_slug' => $gym?->getSlug(),
+                'gym_name' => $gym?->getName(),
             ]
         ]);
     }
@@ -65,11 +69,15 @@ class AuthController extends AbstractController
             return new JsonResponse(['error' => 'Non authentifié'], 401);
         }
 
+        $gym = $user->getGym();
+
         return new JsonResponse([
             'id' => $user->getId(),
             'email' => $user->getEmail(),
             'name' => $user->getName(),
-            'roles' => $user->getRoles()
+            'roles' => $user->getRoles(),
+            'gym_slug' => $gym?->getSlug(),
+            'gym_name' => $gym?->getName(),
         ]);
     }
 }

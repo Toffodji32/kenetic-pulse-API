@@ -30,8 +30,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value)
   const isSuperAdmin = computed(() => user.value?.roles?.includes('ROLE_SUPER_ADMIN'))
-  const isAdmin = computed(() => user.value?.roles?.includes('ROLE_ADMIN') || user.value?.roles?.includes('ROLE_SUPER_ADMIN'))
-  const isClient = computed(() => user.value?.roles?.includes('ROLE_CLIENT') && !isAdmin.value)
 
   function setAuth(t, u) {
     token.value = t
@@ -53,5 +51,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  return { token, user, isAuthenticated, isSuperAdmin, isAdmin, isClient, setAuth, login, logout }
+  return { token, user, isAuthenticated, isSuperAdmin, setAuth, login, logout }
 })

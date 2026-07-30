@@ -43,7 +43,7 @@ async function handleLogin() {
   error.value = ''
   try {
     await auth.login(email.value, password.value)
-    router.push(auth.isAdmin ? '/wallet' : '/client')
+    router.push('/wallet')
   } catch (e) {
     error.value = e.response?.data?.error || 'Email ou mot de passe incorrect'
   } finally {
