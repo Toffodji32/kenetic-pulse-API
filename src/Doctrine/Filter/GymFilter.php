@@ -2,6 +2,7 @@
 
 namespace App\Doctrine\Filter;
 
+use App\Entity\Category;
 use App\Entity\SubscriptionType;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Query\Filter\SQLFilter;
@@ -16,6 +17,7 @@ class GymFilter extends SQLFilter
 
         // Shared entities that should NOT be scoped by gym
         if (in_array($targetEntity->getName(), [
+            Category::class,
             SubscriptionType::class,
         ])) {
             return '';

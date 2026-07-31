@@ -75,7 +75,7 @@ class ProductController extends AbstractController
 
         // ── Catégorie ──────────────────────────────────────────────────────
         if ($categoryName) {
-            $category = $categoryRepo->findOneBy(['name' => $categoryName]);
+            $category = $categoryRepo->findOneBy(['name' => $categoryName, 'gym' => $gym]);
             if ($category) {
                 $product->setCategory($category);
             }
@@ -130,7 +130,7 @@ class ProductController extends AbstractController
                 // Chaîne vide = retirer la catégorie
                 $product->setCategory(null);
             } else {
-                $category = $categoryRepo->findOneBy(['name' => $categoryName]);
+                $category = $categoryRepo->findOneBy(['name' => $categoryName, 'gym' => $gym]);
                 if ($category) {
                     $product->setCategory($category);
                 } else {
