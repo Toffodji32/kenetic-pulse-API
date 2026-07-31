@@ -99,9 +99,14 @@ class OrderController extends AbstractController
     }
 
     #[Route('', methods: ['GET'])]
-    public function list(OrderRepository $orderRepo): JsonResponse
+    public function list(OrderRepository $orderRepo, GymResolver $gymResolver): JsonResponse
     {
-        $orders = $orderRepo->findBy([], ['id' => 'DESC']);
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json([]);
+        }
+
+        $orders = $orderRepo->findBy(['gym' => $gym], ['id' => 'DESC']);
         $data   = [];
 
         foreach ($orders as $order) {

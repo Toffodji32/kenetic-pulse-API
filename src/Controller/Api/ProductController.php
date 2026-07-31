@@ -25,9 +25,10 @@ class ProductController extends AbstractController
     public function index(ProductRepository $productRepo): JsonResponse
     {
         $gym = $this->gymResolver->getGym();
-        $products = $gym
-            ? $productRepo->findBy(['gym' => $gym])
-            : $productRepo->findAll();
+        if (!$gym) {
+            return $this->json([]); // pas de gym → ne pas exposer les produits des autres salles
+        }
+        $products = $productRepo->findBy(['gym' => $gym]);
 
         return $this->json(array_map(
             fn($p) => $this->formatProduct($p),

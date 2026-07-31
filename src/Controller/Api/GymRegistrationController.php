@@ -33,6 +33,11 @@ class GymRegistrationController extends AbstractController
         $ownerEmail = $data['ownerEmail'] ?? null;
         $ownerPassword = $data['ownerPassword'] ?? null;
         $ownerPhone = $data['ownerPhone'] ?? null;
+        $planType = $data['plan_type'] ?? 'basic';
+
+        if (!in_array($planType, ['basic', 'premium'], true)) {
+            $planType = 'basic';
+        }
 
         if (!$gymName || !$ownerName || !$ownerEmail || !$ownerPassword) {
             return new JsonResponse(['error' => 'gymName, ownerName, ownerEmail et ownerPassword requis'], 400);
@@ -76,9 +81,9 @@ class GymRegistrationController extends AbstractController
             $subscription->setGym($gym);
             $subscription->setStatus(GymSubscription::STATUS_TRIAL);
             $subscription->setPlan('monthly');
-            $subscription->setPlanType('premium');
+            $subscription->setPlanType($planType);
             $subscription->setTrialEndsAt($trialEndsAt);
-            $subscription->setAmount(15000);
+            $subscription->setAmount($planType === 'premium' ? 25000 : 15000);
             $this->em->persist($subscription);
 
             $user = new User();

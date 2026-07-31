@@ -96,9 +96,14 @@ class SubscriptionController extends AbstractController
 
     // ── GET ALL ───────────────────────────────────────────────────────────
     #[Route('', methods: ['GET'])]
-    public function index(SubscriptionRepository $repo): JsonResponse
+    public function index(SubscriptionRepository $repo, GymResolver $gymResolver): JsonResponse
     {
-        $subscriptions = $repo->findAll();
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json([]);
+        }
+
+        $subscriptions = $repo->findBy(['gym' => $gym], ['startDate' => 'DESC']);
         return $this->json(array_map(fn($sub) => $this->formatSubscription($sub), $subscriptions));
     }
 

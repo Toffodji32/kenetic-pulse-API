@@ -92,10 +92,17 @@ class ShopController extends AbstractController
     }
 
     #[Route('/products', methods: ['GET'])]
-    public function products(ProductRepository $repo): JsonResponse
+    public function products(ProductRepository $repo, #[CurrentUser] ?User $user): JsonResponse
     {
-        $products = $repo->findAll();
-        $data     = [];
+        // Isoler les produits par salle : si l'utilisateur est connecté,
+        // on ne montre QUE les produits de SA salle
+        if ($user?->getGym()) {
+            $products = $repo->findBy(['gym' => $user->getGym()]);
+        } else {
+            $products = [];
+        }
+
+        $data = [];
 
         foreach ($products as $p) {
             if ($p->getQuantity() <= 0) continue;

@@ -169,10 +169,16 @@ class PaymentController extends AbstractController
     // ========================
     #[Route('', methods: ['GET'])]
     public function list(
-        \App\Repository\PaymentRepository $paymentRepo
+        \App\Repository\PaymentRepository $paymentRepo,
+        \App\Security\GymResolver $gymResolver,
     ): JsonResponse {
 
-        $payments = $paymentRepo->findBy([], ['id' => 'DESC']);
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json([]);
+        }
+
+        $payments = $paymentRepo->findBy(['gym' => $gym], ['id' => 'DESC']);
 
         $data = [];
 

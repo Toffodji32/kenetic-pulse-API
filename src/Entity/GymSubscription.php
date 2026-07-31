@@ -28,8 +28,8 @@ class GymSubscription
     #[ORM\Column(length: 20)]
     private ?string $plan = null;
 
-    #[ORM\Column(length: 20, options: ["default" => "premium"])]
-    private ?string $planType = 'premium';
+    #[ORM\Column(length: 20, options: ["default" => "basic"])]
+    private ?string $planType = 'basic';
 
     #[ORM\Column]
     private ?\DateTime $trialEndsAt = null;

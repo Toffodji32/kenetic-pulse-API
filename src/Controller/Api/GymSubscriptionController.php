@@ -57,6 +57,49 @@ class GymSubscriptionController extends AbstractController
         ]);
     }
 
+    #[Route('/plan', name: 'api_gym_subscription_change_plan', methods: ['POST'])]
+    public function changePlan(Request $request): JsonResponse
+    {
+        $gym = $this->gymResolver->getGym();
+
+        if (!$gym) {
+            return new JsonResponse(['error' => 'Gym non trouvée'], 404);
+        }
+
+        $subscription = $gym->getGymSubscription();
+
+        if (!$subscription) {
+            return new JsonResponse(['error' => 'Abonnement non trouvé'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $planType = $data['plan_type'] ?? null;
+
+        if (!in_array($planType, ['basic', 'premium'], true)) {
+            return new JsonResponse(['error' => 'plan_type doit être basic ou premium'], 400);
+        }
+
+        if ($subscription->getPlanType() === $planType) {
+            return new JsonResponse(['error' => "L'abonnement est déjà en plan $planType"], 400);
+        }
+
+        $amount = $planType === 'premium' ? 25000 : 15000;
+
+        $subscription->setPlanType($planType);
+        $subscription->setAmount($amount);
+        $subscription->setUpdatedAt(new \DateTime());
+        $this->em->flush();
+
+        return $this->json([
+            'message' => "Plan changé vers $planType",
+            'status' => $subscription->getStatus(),
+            'planType' => $subscription->getPlanType(),
+            'plan' => $subscription->getPlan(),
+            'amount' => $subscription->getAmount(),
+            'endsAt' => $subscription->getEndsAt()?->format('Y-m-d H:i:s'),
+        ]);
+    }
+
     #[Route('/pay', name: 'api_gym_subscription_pay', methods: ['POST'])]
     public function pay(Request $request): JsonResponse
     {
