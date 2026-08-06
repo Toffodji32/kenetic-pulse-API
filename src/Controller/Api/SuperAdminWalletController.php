@@ -282,49 +282,110 @@ class SuperAdminWalletController extends AbstractController
 
     private function callFedaPayTransfer(WithdrawalRequest $withdrawal): string
     {
-        $apiKey = $_ENV['FEDAPAY_SECRET_KEY'] ?? '';
-        $env = $_ENV['FEDAPAY_ENV'] ?? 'sandbox';
+        $apiKey = $_ENV['FEDAPAY_SECRET_KEY'] ?? $_SERVER['FEDAPAY_SECRET_KEY'] ?? 'sk_sandbox_ymFzMM3g7lgDLLjNbte5txWx';
+        $env = $_ENV['FEDAPAY_ENV'] ?? $_SERVER['FEDAPAY_ENV'] ?? 'sandbox';
         $baseUrl = $env === 'production'
             ? 'https://api.fedapay.com/v1'
             : 'https://sandbox-api.fedapay.com/v1';
 
-        $ch = curl_init($baseUrl . '/transfers');
-        curl_setopt_array($ch, [
+        $gym = $withdrawal->getGym();
+        $owner = $gym?->getGymOwner();
+        $phone = preg_replace('/[^0-9]/', '', $withdrawal->getMobileMoneyNumber());
+        $phone = preg_replace('/^229/', '', $phone);
+        $country = $env === 'production' ? 'BJ' : 'BJ';
+
+        // 1. Créer la transaction FedaPay
+        $payload = [
+            'description' => 'Retrait wallet Kinetic Pulse - ' . ($gym?->getName() ?? 'Gym'),
+            'amount' => $withdrawal->getAmount(),
+            'currency' => ['iso' => 'XOF'],
+            'callback_url' => 'https://kenetic-pulse-api.onrender.com/api/webhook/fedapay',
+            'customer' => [
+                'firstname' => $owner?->getName() ? explode(' ', $owner->getName())[0] : 'Client',
+                'lastname' => $owner?->getName() && str_contains($owner->getName(), ' ')
+                    ? substr($owner->getName(), strpos($owner->getName(), ' ') + 1)
+                    : 'Kinetic',
+                'email' => $owner?->getEmail() ?? 'client@kinetic-pulse.com',
+                'phone_number' => [
+                    'number' => $phone,
+                    'country' => $country,
+                ],
+            ],
+        ];
+
+        $txData = $this->callFedaPay($baseUrl, $apiKey, 'POST', '/transactions', $payload);
+        $transaction = $txData['v1/transaction'] ?? $txData['transaction'] ?? $txData;
+        $txId = $transaction['id'] ?? null;
+        if (!$txId) {
+            throw new \RuntimeException('FedaPay: transaction non créée');
+        }
+
+        // 2. Générer le token de paiement
+        $tokenData = $this->callFedaPay($baseUrl, $apiKey, 'POST', '/transactions/' . $txId . '/token', []);
+        $token = $tokenData['token'] ?? null;
+        if (!$token) {
+            throw new \RuntimeException('FedaPay: token non généré');
+        }
+
+        // 3. Déclencher l'envoi Mobile Money
+        // En sandbox, seuls les envois de test sont autorisés (momo_test)
+        $mode = $env === 'production'
+            ? ($withdrawal->getMobileMoneyOperator() === WithdrawalRequest::OPERATOR_MOOV ? 'moov' : 'mtn')
+            : 'momo_test';
+        $sendData = $this->callFedaPay($baseUrl, $apiKey, 'POST', '/' . $mode, [
+            'token' => $token,
+            'phone_number' => [
+                'number' => $phone,
+                'country' => $country,
+            ],
+        ]);
+
+        $intent = $sendData['v1/payment_intent'] ?? $sendData['payment_intent'] ?? $sendData;
+        $reference = $intent['reference'] ?? $intent['id'] ?? null;
+        if (!$reference) {
+            throw new \RuntimeException('FedaPay: réponse d\'envoi invalide');
+        }
+
+        return (string) $reference;
+    }
+
+    private function callFedaPay(string $baseUrl, string $apiKey, string $method, string $path, array $payload): array
+    {
+        $ch = curl_init($baseUrl . $path);
+        $options = [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => json_encode([
-                'amount' => $withdrawal->getAmount(),
-                'currency' => ['iso' => 'XOF'],
-                'recipient_type' => 'mobile_money',
-                'mobile_money_number' => $withdrawal->getMobileMoneyNumber(),
-                'mobile_money_operator' => $withdrawal->getMobileMoneyOperator(),
-                'reference' => 'withdrawal-' . $withdrawal->getId() . '-' . time(),
-                'description' => 'Retrait wallet Kinetic Pulse - ' . $withdrawal->getGym()->getName(),
-            ]),
+            CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $apiKey,
-                'Content-Type: application/json',
                 'Accept: application/json',
             ],
             CURLOPT_TIMEOUT => 30,
-        ]);
+        ];
+        if (!empty($payload)) {
+            $options[CURLOPT_POSTFIELDS] = json_encode($payload);
+            $options[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
+        }
+        curl_setopt_array($ch, $options);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
+        if ($curlError) {
+            throw new \RuntimeException('FedaPay: erreur réseau - ' . $curlError);
+        }
+
         if ($httpCode !== 200 && $httpCode !== 201) {
-            throw new \RuntimeException('FedaPay transfer failed (HTTP ' . $httpCode . '): ' . $response);
+            throw new \RuntimeException('FedaPay a refusé (' . $method . ' ' . $path . ' HTTP ' . $httpCode . '): ' . substr((string) $response, 0, 500));
         }
 
-        $data = json_decode($response, true);
-        $txData = $data['v1/transfer'] ?? $data['transfer'] ?? $data;
-
-        if (!isset($txData['id'])) {
-            throw new \RuntimeException('FedaPay transfer response missing ID');
+        $data = json_decode((string) $response, true);
+        if (!is_array($data)) {
+            throw new \RuntimeException('FedaPay: réponse JSON invalide');
         }
 
-        return (string) $txData['id'];
+        return $data;
     }
 
     private function notifyGymWithdrawalProcessing(WithdrawalRequest $withdrawal): void
