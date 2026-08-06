@@ -81,7 +81,8 @@ class WalletController extends AbstractController
             ->setParameter('gym', $gym)
             ->orderBy('wt.createdAt', 'DESC');
 
-        $total = (clone $qb)->select('COUNT(wt.id)')->getQuery()->getSingleScalarResult();
+        $countQb = clone $qb;
+        $total = $countQb->select('COUNT(wt.id)')->resetDQLPart('orderBy')->getQuery()->getSingleScalarResult();
 
         $items = $qb->setFirstResult($offset)->setMaxResults($limit)->getQuery()->getResult();
 

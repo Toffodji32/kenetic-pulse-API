@@ -40,7 +40,8 @@ class SuperAdminWalletController extends AbstractController
             $qb->where('wr.status = :status')->setParameter('status', $status);
         }
 
-        $total = (clone $qb)->select('COUNT(wr.id)')->getQuery()->getSingleScalarResult();
+        $countQb = clone $qb;
+        $total = $countQb->select('COUNT(wr.id)')->resetDQLPart('orderBy')->getQuery()->getSingleScalarResult();
         $items = $qb->setFirstResult($offset)->setMaxResults($limit)->getQuery()->getResult();
 
         $data = array_map(fn(WithdrawalRequest $w) => [
