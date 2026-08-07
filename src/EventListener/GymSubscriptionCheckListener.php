@@ -32,7 +32,7 @@ class GymSubscriptionCheckListener
 
         $path = $request->getPathInfo();
 
-        // Always allow these routes
+        // Routes toujours accessibles même en cas d'expiration (login, paiement, super-admin...)
         $allowedPaths = [
             '/api/login',
             '/api/gym/register',
@@ -40,12 +40,6 @@ class GymSubscriptionCheckListener
             '/api/shop',
             '/api/super-admin',
         ];
-
-        foreach ($allowedPaths as $allowed) {
-            if (str_starts_with($path, $allowed)) {
-                return;
-            }
-        }
 
         $token = $this->tokenStorage->getToken();
 
@@ -64,8 +58,9 @@ class GymSubscriptionCheckListener
             return;
         }
 
-        // Ne bloquer que les administrateurs, pas les clients boutique
-        if (!in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+        // Ne bloquer que les administrateurs et réceptionnistes, pas les clients boutique
+        $roles = $user->getRoles();
+        if (!in_array('ROLE_ADMIN', $roles, true) && !in_array('ROLE_USER', $roles, true)) {
             return;
         }
 
@@ -81,12 +76,26 @@ class GymSubscriptionCheckListener
             return;
         }
 
-        // Auto-expire if trial expired
+        // Auto-expire si le trial est dépassé ou si l'abonnement payé est échu
+        $now = new \DateTime();
         if ($subscription->getStatus() === \App\Entity\GymSubscription::STATUS_TRIAL
-            && $subscription->getTrialEndsAt() < new \DateTime()) {
+            && $subscription->getTrialEndsAt() < $now) {
             $subscription->setStatus(\App\Entity\GymSubscription::STATUS_EXPIRED);
-            $subscription->setUpdatedAt(new \DateTime());
+            $subscription->setUpdatedAt($now);
             $this->em->flush();
+        } elseif ($subscription->getStatus() === \App\Entity\GymSubscription::STATUS_ACTIVE
+            && $subscription->getEndsAt() !== null
+            && $subscription->getEndsAt() < $now) {
+            $subscription->setStatus(\App\Entity\GymSubscription::STATUS_EXPIRED);
+            $subscription->setUpdatedAt($now);
+            $this->em->flush();
+        }
+
+        // Blocage : l'utilisateur peut toujours accéder à certaines routes
+        foreach ($allowedPaths as $allowed) {
+            if (str_starts_with($path, $allowed)) {
+                return;
+            }
         }
 
         if ($subscription->getStatus() === \App\Entity\GymSubscription::STATUS_EXPIRED) {
