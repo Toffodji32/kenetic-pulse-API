@@ -6,6 +6,7 @@ use App\Entity\WithdrawalRequest;
 use App\Repository\GymRepository;
 use App\Repository\WalletTransactionRepository;
 use App\Repository\WithdrawalRequestRepository;
+use App\Service\MailerService;
 use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,6 +22,7 @@ class SuperAdminWalletController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private WalletService $walletService,
+        private MailerService $mailerService,
     ) {}
 
     #[Route('/withdrawals', name: 'api_superadmin_withdrawals', methods: ['GET'])]
@@ -413,7 +415,7 @@ class SuperAdminWalletController extends AbstractController
                 ->subject('Kinetic Pulse — Retrait en cours de traitement')
                 ->html($html);
 
-            $this->getContainer()->get('App\Service\MailerService')?->sendRaw($email);
+            $this->mailerService->sendRaw($email);
         } catch (\Exception $e) {
             // Fail silently
         }
@@ -442,7 +444,7 @@ class SuperAdminWalletController extends AbstractController
                 ->subject('Kinetic Pulse — Demande de retrait rejetée')
                 ->html($html);
 
-            $this->getContainer()->get('App\Service\MailerService')?->sendRaw($email);
+            $this->mailerService->sendRaw($email);
         } catch (\Exception $e) {
             // Fail silently
         }
