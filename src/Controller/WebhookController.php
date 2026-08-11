@@ -30,7 +30,11 @@ class WebhookController extends AbstractController
 
         // 1. Verify HMAC signature
         $signature = $request->headers->get('X-Fedapay-Signature', '');
-        $expected = hash_hmac('sha256', $rawBody, $_ENV['FEDAPAY_WEBHOOK_SECRET'] ?? '');
+        $secret = $_ENV['FEDAPAY_WEBHOOK_SECRET']
+            ?? $_SERVER['FEDAPAY_WEBHOOK_SECRET']
+            ?? getenv('FEDAPAY_WEBHOOK_SECRET')
+            ?? '';
+        $expected = hash_hmac('sha256', $rawBody, $secret);
         if (!hash_equals($expected, $signature)) {
             return new JsonResponse(['error' => 'Invalid signature'], 401);
         }
