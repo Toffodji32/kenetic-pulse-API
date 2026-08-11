@@ -95,15 +95,29 @@ class WebhookController extends AbstractController
         $metadata = $data['metadata'] ?? [];
         $gymId = $metadata['gym_id'] ?? null;
 
-        if (!$gymId) {
-            $this->logger->warning('Webhook transaction.approved missing gym_id in metadata', ['event_id' => $webhookEvent->getFedapayEventId()]);
-            return;
+        $gym = null;
+
+        if ($gymId) {
+            $gym = $this->em->getRepository(\App\Entity\Gym::class)->find($gymId);
+            if (!$gym) {
+                $this->logger->error('Webhook gym not found', ['gym_id' => $gymId, 'event_id' => $webhookEvent->getFedapayEventId()]);
+                return;
+            }
         }
 
-        $gym = $this->em->getRepository(\App\Entity\Gym::class)->find($gymId);
+        // Fallback : retrouver le gym via l'email du client (boutique par salle / globale)
         if (!$gym) {
-            $this->logger->error('Webhook gym not found', ['gym_id' => $gymId, 'event_id' => $webhookEvent->getFedapayEventId()]);
-            return;
+            $customerEmail = $data['customer']['email'] ?? null;
+            if ($customerEmail) {
+                $user = $this->em->getRepository(\App\Entity\User::class)->findOneByEmail($customerEmail);
+                $gym = $user?->getGym();
+            }
+            if (!$gym) {
+                $this->logger->warning('Webhook transaction.approved : gym introuvable (pas de gym_id ni d\'email client connu)', [
+                    'event_id' => $webhookEvent->getFedapayEventId(),
+                ]);
+                return;
+            }
         }
 
         $amount = (int) ($data['amount'] ?? 0);
@@ -113,6 +127,17 @@ class WebhookController extends AbstractController
         }
 
         $reference = $data['reference'] ?? $data['id'] ?? $webhookEvent->getFedapayEventId();
+
+        // Anti double-crédit : si la validation admin a déjà crédité (même référence), on saute
+        $alreadyCredited = $this->em->getRepository(\App\Entity\WalletTransaction::class)
+            ->findOneBy(['reference' => (string) $reference, 'type' => \App\Entity\WalletTransaction::TYPE_CREDIT]);
+        if ($alreadyCredited) {
+            $this->logger->info('Webhook transaction.approved déjà créditée, ignorée', [
+                'reference' => $reference,
+                'event_id' => $webhookEvent->getFedapayEventId(),
+            ]);
+            return;
+        }
 
         $this->walletService->credit(
             $gym,

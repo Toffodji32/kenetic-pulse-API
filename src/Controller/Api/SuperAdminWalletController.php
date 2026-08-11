@@ -299,7 +299,7 @@ class SuperAdminWalletController extends AbstractController
             'description' => 'Retrait wallet Kinetic Pulse - ' . ($gym?->getName() ?? 'Gym'),
             'amount' => $withdrawal->getAmount(),
             'currency' => ['iso' => 'XOF'],
-            'callback_url' => 'https://kenetic-pulse-api.onrender.com/api/webhook/fedapay',
+            'callback_url' => 'https://kenetic-pulse-api.onrender.com/api/webhooks/fedapay',
             'customer' => [
                 'firstname' => $owner?->getName() ? explode(' ', $owner->getName())[0] : 'Client',
                 'lastname' => $owner?->getName() && str_contains($owner->getName(), ' ')

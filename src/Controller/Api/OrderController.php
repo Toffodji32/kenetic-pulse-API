@@ -228,21 +228,33 @@ class OrderController extends AbstractController
             $em->persist($payment);
 
             // Créditer le wallet si pas déjà fait (évite double-credit)
-            if (!$order->getFedapayTransactionId()) {
+            $alreadyCredited = $em->getRepository(\App\Entity\WalletTransaction::class)
+                ->findOneBy(['reference' => 'ORD-' . $order->getId(), 'type' => 'credit']);
+
+            // Pour une commande FedaPay : le webhook transaction.approved crédite normalement
+            // avec la référence = id brut de la transaction FedaPay.
+            // Filet de sécurité : si le webhook n'a pas encore crédité, créditer ici avec la même référence.
+            if (!$alreadyCredited && $order->getFedapayTransactionId()) {
                 $alreadyCredited = $em->getRepository(\App\Entity\WalletTransaction::class)
-                    ->findOneBy(['reference' => 'ORD-' . $order->getId(), 'type' => 'credit']);
-                if (!$alreadyCredited) {
-                    $gym = $order->getGym();
-                    if ($gym) {
-                        $walletService->credit(
-                            $gym,
-                            (int) $order->getTotalAmount(),
-                            'ORD-' . $order->getId(),
-                            'Paiement espèce — commande #' . $order->getId(),
-                            [],
-                            0
-                        );
-                    }
+                    ->findOneBy(['reference' => $order->getFedapayTransactionId(), 'type' => 'credit']);
+            }
+
+            if (!$alreadyCredited) {
+                $gym = $order->getGym();
+                if ($gym) {
+                    $reference = $order->getFedapayTransactionId()
+                        ? $order->getFedapayTransactionId()
+                        : 'ORD-' . $order->getId();
+                    $walletService->credit(
+                        $gym,
+                        (int) $order->getTotalAmount(),
+                        $reference,
+                        $order->getFedapayTransactionId()
+                            ? 'Paiement FedaPay — commande #' . $order->getId()
+                            : 'Paiement espèce — commande #' . $order->getId(),
+                        [],
+                        0
+                    );
                 }
             }
         }

@@ -33,6 +33,22 @@ class GymShopController extends AbstractController
         return $this->em->getRepository(Gym::class)->findOneBySlug($gymSlug);
     }
 
+    #[Route('/info', name: 'api_gym_shop_info', methods: ['GET'])]
+    public function info(string $gymSlug): JsonResponse
+    {
+        $gym = $this->resolveGym($gymSlug);
+        if (!$gym) {
+            return new JsonResponse(['error' => 'Salle non trouvée'], 404);
+        }
+
+        return $this->json([
+            'id' => $gym->getId(),
+            'name' => $gym->getName(),
+            'slug' => $gym->getSlug(),
+            'logo' => $gym->getLogo(),
+        ]);
+    }
+
     #[Route('/products', name: 'api_gym_shop_products', methods: ['GET'])]
     public function products(string $gymSlug): JsonResponse
     {

@@ -49,6 +49,7 @@ security:
         # Boutique publique (globale et par salle)
         - { path: ^/api/shop/register,             roles: PUBLIC_ACCESS }
         - { path: ^/api/shop/products,             roles: PUBLIC_ACCESS, methods: [GET] }
+        - { path: ^/api/shop/[^/]+/info,              roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/shop/[^/]+/products,       roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/shop/[^/]+/categories,     roles: PUBLIC_ACCESS, methods: [GET] }
         - { path: ^/api/shop/[^/]+/register,       roles: PUBLIC_ACCESS }
