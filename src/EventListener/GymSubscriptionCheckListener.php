@@ -35,6 +35,7 @@ class GymSubscriptionCheckListener
         // Routes toujours accessibles même en cas d'expiration (login, paiement, super-admin...)
         $allowedPaths = [
             '/api/login',
+            '/api/token/refresh',
             '/api/gym/register',
             '/api/gym/subscription',
             '/api/shop',

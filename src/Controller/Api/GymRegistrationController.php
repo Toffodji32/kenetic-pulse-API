@@ -7,6 +7,8 @@ use App\Entity\GymOwner;
 use App\Entity\GymSubscription;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -21,7 +23,17 @@ class GymRegistrationController extends AbstractController
         private EntityManagerInterface $em,
         private UserPasswordHasherInterface $hasher,
         private JWTTokenManagerInterface $jwtManager,
+        private RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        private RefreshTokenManagerInterface $refreshTokenManager,
     ) {}
+
+    private function createRefreshToken(User $user): string
+    {
+        $refreshToken = $this->refreshTokenGenerator->createForUserWithTtl($user, 1800);
+        $this->refreshTokenManager->save($refreshToken);
+
+        return $refreshToken->getRefreshToken();
+    }
 
     #[Route('/register', name: 'api_gym_register', methods: ['POST'])]
     public function register(Request $request): JsonResponse
@@ -107,6 +119,7 @@ class GymRegistrationController extends AbstractController
 
         return new JsonResponse([
             'token' => $token,
+            'refresh_token' => $this->createRefreshToken($user),
             'user' => [
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),

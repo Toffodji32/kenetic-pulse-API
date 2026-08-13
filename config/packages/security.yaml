@@ -29,7 +29,10 @@ security:
             pattern: ^/api
             stateless: true
             provider: app_user_provider
+            entry_point: jwt
             jwt: ~
+            refresh_jwt:
+                check_path: api_refresh_token
 
         main:
             lazy: true
@@ -41,6 +44,7 @@ security:
 
         # Auth
         - { path: ^/api/login,            roles: PUBLIC_ACCESS }
+        - { path: ^/api/token/refresh,    roles: PUBLIC_ACCESS }
         - { path: ^/api/register,         roles: PUBLIC_ACCESS }
 
         # Gym registration (SaaS)

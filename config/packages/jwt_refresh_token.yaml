@@ -1,0 +1,10 @@
+gesdinet_jwt_refresh_token:
+    ttl: 1800
+    ttl_update: true
+    single_use: true
+    single_use_ttl_update: true
+    hash_tokens: true
+    dbal_auto_create_table: true
+    refresh_token_class: App\Entity\RefreshToken
+    object_manager: doctrine.orm.default_entity_manager
+    manager_type: orm

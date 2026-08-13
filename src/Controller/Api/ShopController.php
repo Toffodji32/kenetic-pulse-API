@@ -13,6 +13,8 @@ use App\Repository\OrderRepository;
 use App\Repository\ProductRepository;
 use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -31,6 +33,8 @@ class ShopController extends AbstractController
         EntityManagerInterface $em,
         UserPasswordHasherInterface $hasher,
         JWTTokenManagerInterface $jwt,
+        RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        RefreshTokenManagerInterface $refreshTokenManager,
         GymRepository $gymRepo,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
@@ -80,8 +84,12 @@ class ShopController extends AbstractController
 
         $token = $jwt->create($user);
 
+        $refreshToken = $refreshTokenGenerator->createForUserWithTtl($user, 1800);
+        $refreshTokenManager->save($refreshToken);
+
         return $this->json([
             'token' => $token,
+            'refresh_token' => $refreshToken->getRefreshToken(),
             'user'  => [
                 'id'    => $user->getId(),
                 'name'  => $user->getName(),

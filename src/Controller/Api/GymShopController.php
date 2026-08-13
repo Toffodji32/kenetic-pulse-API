@@ -9,6 +9,8 @@ use App\Entity\OrderItem;
 use App\Entity\User;
 use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\ExpressionLanguage\Expression;
@@ -26,7 +28,17 @@ class GymShopController extends AbstractController
         private EntityManagerInterface $em,
         private UserPasswordHasherInterface $hasher,
         private JWTTokenManagerInterface $jwtManager,
+        private RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        private RefreshTokenManagerInterface $refreshTokenManager,
     ) {}
+
+    private function createRefreshToken(User $user): string
+    {
+        $refreshToken = $this->refreshTokenGenerator->createForUserWithTtl($user, 1800);
+        $this->refreshTokenManager->save($refreshToken);
+
+        return $refreshToken->getRefreshToken();
+    }
 
     private function resolveGym(string $gymSlug): ?Gym
     {
@@ -151,6 +163,7 @@ class GymShopController extends AbstractController
 
         return $this->json([
             'token' => $token,
+            'refresh_token' => $this->createRefreshToken($user),
             'user' => [
                 'id' => $user->getId(),
                 'name' => $user->getName(),

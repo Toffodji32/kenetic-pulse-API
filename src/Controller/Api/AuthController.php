@@ -4,6 +4,8 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use Gesdinet\JWTRefreshTokenBundle\Generator\RefreshTokenGeneratorInterface;
+use Gesdinet\JWTRefreshTokenBundle\Model\RefreshTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,15 +20,21 @@ class AuthController extends AbstractController
     private EntityManagerInterface $em;
     private UserPasswordHasherInterface $hasher;
     private JWTTokenManagerInterface $jwtManager;
+    private RefreshTokenGeneratorInterface $refreshTokenGenerator;
+    private RefreshTokenManagerInterface $refreshTokenManager;
 
     public function __construct(
         EntityManagerInterface $em,
         UserPasswordHasherInterface $hasher,
-        JWTTokenManagerInterface $jwtManager
+        JWTTokenManagerInterface $jwtManager,
+        RefreshTokenGeneratorInterface $refreshTokenGenerator,
+        RefreshTokenManagerInterface $refreshTokenManager
     ) {
         $this->em = $em;
         $this->hasher = $hasher;
         $this->jwtManager = $jwtManager;
+        $this->refreshTokenGenerator = $refreshTokenGenerator;
+        $this->refreshTokenManager = $refreshTokenManager;
     }
 
     #[Route('/login', name: 'api_login', methods: ['POST'])]
@@ -46,11 +54,14 @@ class AuthController extends AbstractController
         }
 
         $token = $this->jwtManager->create($user);
+        $refreshToken = $this->createRefreshToken($user);
 
         $gym = $user->getGym();
 
         return new JsonResponse([
             'token' => $token,
+            'refresh_token' => $refreshToken,
+            'expires_in' => 1800,
             'user' => [
                 'id' => $user->getId(),
                 'email' => $user->getEmail(),
@@ -79,5 +90,13 @@ class AuthController extends AbstractController
             'gym_slug' => $gym?->getSlug(),
             'gym_name' => $gym?->getName(),
         ]);
+    }
+
+    private function createRefreshToken(User $user): string
+    {
+        $refreshToken = $this->refreshTokenGenerator->createForUserWithTtl($user, 1800);
+        $this->refreshTokenManager->save($refreshToken);
+
+        return $refreshToken->getRefreshToken();
     }
 }
