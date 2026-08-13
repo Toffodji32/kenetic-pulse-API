@@ -29,7 +29,8 @@ class DashboardController extends AbstractController
         PaymentRepository $paymentRepo,
         SubscriptionRepository $subRepo,
         CheckinRepository $checkinRepo,
-        GymResolver $gymResolver
+        GymResolver $gymResolver,
+        \Doctrine\DBAL\Connection $connection
     ): JsonResponse {
 
         // ========================
@@ -118,6 +119,11 @@ class DashboardController extends AbstractController
             ->getSingleScalarResult();
 
         // ========================
+        // 📈 TRAJECTOIRE DES REVENUS (6 derniers mois)
+        // ========================
+        $revenueTrend = $this->buildRevenueTrend($connection, $gym);
+
+        // ========================
         // 📊 RESPONSE
         // ========================
         return $this->json([
@@ -145,7 +151,53 @@ class DashboardController extends AbstractController
             ],
             "checkins" => [
                 "today" => (int) $todayCheckins
-            ]
+            ],
+            "revenueTrend" => $revenueTrend
         ]);
+    }
+
+    private function buildRevenueTrend(\Doctrine\DBAL\Connection $connection, \App\Entity\Gym $gym): array
+    {
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $monthStart = (new \DateTime('first day of this month'))->modify("-{$i} months")->setTime(0, 0);
+            $monthEnd = (clone $monthStart)->modify('+1 month');
+            $months[] = [
+                'key' => $monthStart->format('Y-m'),
+                'label' => $this->monthLabel($monthStart->format('n')),
+                'start' => $monthStart,
+                'end' => $monthEnd,
+            ];
+        }
+
+        $rows = $connection->fetchAllAssociative(
+            'SELECT EXTRACT(YEAR FROM payment_date) AS year, EXTRACT(MONTH FROM payment_date) AS month, SUM(amount) AS total
+             FROM payment
+             WHERE gym_id = :gym AND payment_date >= :firstMonth
+             GROUP BY year, month',
+            ['gym' => $gym->getId(), 'firstMonth' => $months[0]['start']->format('Y-m-d 00:00:00')]
+        );
+
+        $totals = [];
+        foreach ($rows as $row) {
+            $totals[$row['year'] . '-' . str_pad((string) $row['month'], 2, '0', STR_PAD_LEFT)] = (float) $row['total'];
+        }
+
+        $result = [];
+        foreach ($months as $month) {
+            $result[] = [
+                'month' => $month['label'],
+                'current' => $totals[$month['key']] ?? 0.0,
+                'previous' => $totals[date('Y-m', strtotime($month['key'] . '-01 -1 month'))] ?? 0.0,
+            ];
+        }
+
+        return $result;
+    }
+
+    private function monthLabel(int $monthNumber): string
+    {
+        $labels = [1 => 'Janv.', 2 => 'Févr.', 3 => 'Mars', 4 => 'Avr.', 5 => 'Mai', 6 => 'Juin', 7 => 'Juil.', 8 => 'Août', 9 => 'Sept.', 10 => 'Oct.', 11 => 'Nov.', 12 => 'Déc.'];
+        return $labels[$monthNumber] ?? (string) $monthNumber;
     }
 }
