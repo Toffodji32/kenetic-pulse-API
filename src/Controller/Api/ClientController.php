@@ -10,6 +10,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
 use Endroid\QrCode\Builder\Builder;
@@ -199,6 +200,26 @@ class ClientController extends AbstractController
                 "qrCode"    => $client->getQrCode(),
             ]
         ]);
+    }
+
+    #[Route('/{id}/qr-code', methods: ['GET'])]
+    public function qrCode(Client $client): Response
+    {
+        $result = (new Builder())->build(
+            writer: new PngWriter(),
+            data: json_encode([
+                "uuid" => (string) $client->getUuid(),
+                "name" => $client->getFirstName() . ' ' . $client->getLastName()
+            ]),
+            size: 300,
+            margin: 10,
+        );
+
+        return new Response(
+            $result->getString(),
+            200,
+            ['Content-Type' => 'image/png']
+        );
     }
 
     #[Route('/{id}', methods: ['DELETE'])]

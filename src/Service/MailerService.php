@@ -63,7 +63,24 @@ class MailerService
                     'cid'  => $cid,
                 ]);
             } else {
-                $this->logger->warning('QR code introuvable', ['path' => $qrCodePath]);
+                // Filesystem Render éphémère : régénère le PNG en mémoire
+                $result = (new \Endroid\QrCode\Builder\Builder())->build(
+                    writer: new \Endroid\QrCode\Writer\PngWriter(),
+                    data: json_encode([
+                        "uuid" => (string) $client->getUuid(),
+                        "name" => $client->getFirstName() . ' ' . $client->getLastName()
+                    ]),
+                    size: 300,
+                    margin: 10,
+                );
+                $email->addPart(
+                    (new DataPart($result->getString(), 'qrcode_acces.png', 'image/png'))
+                        ->asInline()
+                        ->setContentId($cid)
+                );
+                $this->logger->debug('QR code régénéré en mémoire (fichier absent)', [
+                    'cid' => $cid,
+                ]);
             }
 
             $this->mailer->send($email);
