@@ -130,13 +130,32 @@ php get_gmail_token.php
 
 ### 6. Tester
 
-1. Va sur https://kinetic-pulse-phi.vercel.app
+1. Va sur https://kinetic-pulse-roan.vercel.app
 2. Crée un client
 3. Vérifie les logs Render pour voir si l'email est envoyé
+
+## ⚠️ Renouvellement du refresh token (mode Test — toutes les ~7 jours)
+
+L'app est en **mode Test** en attendant la validation Google (nécessite un domaine privé acheté, ex: `kinetic-pulse.fr`). En mode Test, le refresh token expire après **~7 jours** (`refresh_token_expires_in: 604799`).
+
+**Symptôme** : erreur `invalid_grant` dans les logs Render, l'email ne part plus.
+
+**Procédure (2 min)** :
+
+1. Ouvre https://developers.google.com/oauthplayground
+2. Engrenage ⚙ → « Use your own OAuth credentials » est déjà coché (client ID/secret du client Web)
+3. Panneau gauche → **Gmail API v1** → coche `https://www.googleapis.com/auth/gmail.send`
+4. **Authorize APIs** → connecte-toi avec toffodjiatchade@gmail.com → **Allow**
+5. **Exchange authorization code for tokens**
+6. Copie la nouvelle valeur `refresh_token` (commence par `1//0`)
+7. Render → **Environment** → remplace `GOOGLE_REFRESH_TOKEN` → **Save Changes** → attend le redéploiement
+
+> 💡 **Solution définitive** : acheter un domaine (~10 €/an sur OVH/Namecheap), le brancher sur Vercel, vérifier `https://ton-domaine` dans Google Search Console (balise meta), puis **valider le branding** dans l'écran de consentement (Console Google Cloud → Écran de consentement → Audience → Modifier l'application → logo + URLs → Soumettre pour validation). Une fois validé, le refresh token ne expire plus.
 
 ## Dépannage
 
 - **403 Forbidden** : le refresh token n'a pas le scope `gmail.send`. Recommence l'étape 4 en t'assurant d'inclure `https://www.googleapis.com/auth/gmail.send`.
-- **400 invalid_grant** : le refresh token a expiré ou a été révoqué. Recommence l'étape 4.
+- **400 invalid_grant** : le refresh token a expiré ou a été révoqué. Recommence l'étape 4 (voir « Renouvellement du refresh token »).
 - **404 Not Found** : Render déploie encore. Attends 2-3 min.
+- **`curl_setopt(): Unable to create temporary file`** (local Windows) : le php.ini XAMPP contient `sys_temp_dir = "/tmp"` (chemin Linux). Corrige en `C:\xampp\tmp` puis redémarre `php -S`.
 - Consulte les logs Render : Dashboard → ton service → **Logs**.
