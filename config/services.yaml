@@ -5,7 +5,8 @@ parameters:
     # Paramètres personnalisés
     upload_directory: "%kernel.project_dir%/public/uploads"
     app.base_url: "%env(APP_BASE_URL)%"
-    platform_commission_rate: 5
+    # Commission plateforme sur les paiements FedaPay (0 = désactivée en attendant l'adoption de l'app ; remettre le % souhaité pour la réactiver)
+    platform_commission_rate: 0
     withdrawal_min_amount: 1000
     # Valeurs par défaut pour Render (le Dockerfile ENV n'est pas appliqué au runtime)
     env(MAILER_DSN): 'null://null'

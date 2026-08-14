@@ -148,7 +148,8 @@ class WebhookController extends AbstractController
             $amount,
             (string) $reference,
             'Paiement client — transaction FedaPay #' . $reference,
-            ['fedapay_event_id' => $webhookEvent->getFedapayEventId()]
+            ['fedapay_event_id' => $webhookEvent->getFedapayEventId()],
+            0
         );
 
         $this->notifyGymCredit($gym, $amount, $reference);
