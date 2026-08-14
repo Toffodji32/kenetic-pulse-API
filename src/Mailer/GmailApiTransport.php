@@ -9,7 +9,6 @@ use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\AbstractTransport;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\Mime\MessageConverter;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -42,7 +41,7 @@ class GmailApiTransport extends AbstractTransport
 
     protected function doSend(SentMessage $message): void
     {
-        $email = $message->getMessage();
+        $email = $message->getOriginalMessage();
         if (!$email instanceof Email) {
             throw new \RuntimeException('Expected Email instance, got ' . get_class($email));
         }
@@ -53,8 +52,7 @@ class GmailApiTransport extends AbstractTransport
 
         $accessToken = $this->getAccessToken();
 
-        $mimeMessage = MessageConverter::toMimeEntity($email);
-        $rawMessage = $mimeMessage->toString();
+        $rawMessage = $email->toString();
 
         $encoded = rtrim(strtr(base64_encode($rawMessage), '+/', '-_'), '=');
 

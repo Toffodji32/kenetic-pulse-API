@@ -38,7 +38,6 @@ ENV APP_SECRET=ChangeMeInProduction
 ENV DEFAULT_URI=https://kenetic-pulse-api.onrender.com
 ENV APP_BASE_URL=https://kenetic-pulse-api.onrender.com
 ENV MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
-ENV MAILER_DSN=null://null
 ENV FEDAPAY_SECRET_KEY=sk_sandbox_ymFzMM3g7lgDLLjNbte5txWx
 ENV FEDAPAY_ENV=sandbox
 

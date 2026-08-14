@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Client;
 use App\Repository\ClientRepository;
 use App\Security\GymResolver;
+use App\Service\MailerService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -13,6 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Uuid;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Writer\PngWriter;
+use Psr\Log\LoggerInterface;
 
 #[Route('/api/clients')]
 class ClientController extends AbstractController
@@ -77,8 +79,13 @@ class ClientController extends AbstractController
     }
 
     #[Route('', methods: ['POST'])]
-    public function create(Request $request, EntityManagerInterface $em, GymResolver $gymResolver): JsonResponse
-    {
+    public function create(
+        Request $request,
+        EntityManagerInterface $em,
+        GymResolver $gymResolver,
+        MailerService $mailerService,
+        LoggerInterface $logger,
+    ): JsonResponse {
         // ✅ Compatible avec FormData (image + champs)
         $data = $request->request->all();
 
@@ -134,10 +141,21 @@ class ClientController extends AbstractController
         $client->setQrCode($qrPath);
         $em->flush();
 
+        // ✅ Envoi du QR code par email (ne bloque jamais la création si l'envoi échoue)
+        try {
+            $mailerService->sendQrCodeToClient($client);
+        } catch (\Exception $e) {
+            $logger->warning('Echec de l\'envoi du QR code par email', [
+                'client_id' => $client->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return $this->json([
             "message" => "Client créé avec succès",
             "id" => $client->getId(),
             "qrCode" => $client->getQrCode(),
+            "qrEmailSent" => true,
         ], 201);
     }
 
