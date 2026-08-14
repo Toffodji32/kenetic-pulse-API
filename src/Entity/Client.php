@@ -37,6 +37,14 @@ class Client
     private ?string $photo = null;
 
 
+    #[ORM\Column(type: "text", nullable: true)]
+    private ?string $photoData = null;
+
+
+    #[ORM\Column(length: 50, nullable: true)]
+    private ?string $photoMime = null;
+
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $qrCode = null;
 
@@ -176,6 +184,38 @@ class Client
     public function setPhoto(?string $photo): static
     {
         $this->photo = $photo;
+
+        return $this;
+    }
+
+
+
+    public function getPhotoData(): ?string
+    {
+        return $this->photoData;
+    }
+
+
+
+    public function setPhotoData(?string $photoData): static
+    {
+        $this->photoData = $photoData;
+
+        return $this;
+    }
+
+
+
+    public function getPhotoMime(): ?string
+    {
+        return $this->photoMime;
+    }
+
+
+
+    public function setPhotoMime(?string $photoMime): static
+    {
+        $this->photoMime = $photoMime;
 
         return $this;
     }

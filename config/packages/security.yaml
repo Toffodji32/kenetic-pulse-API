@@ -74,6 +74,9 @@ security:
         # QR code client (image chargée via <img>, sans header JWT — contient uniquement uuid+nom)
         - { path: ^/api/clients/\d+/qr-code, roles: PUBLIC_ACCESS, methods: [GET] }
 
+        # Photo client (image chargée via <img>, sans header JWT)
+        - { path: ^/api/clients/\d+/photo, roles: PUBLIC_ACCESS, methods: [GET] }
+
         # Super admin
         - { path: ^/api/super-admin,      roles: ROLE_SUPER_ADMIN }
         - { path: ^/api/superadmin,       roles: ROLE_SUPER_ADMIN }

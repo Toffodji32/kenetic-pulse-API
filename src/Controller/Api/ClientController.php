@@ -120,10 +120,12 @@ class ClientController extends AbstractController
         $uuid = Uuid::v4()->toRfc4122();
         $client->setUuid($uuid);
 
-        // ✅ Upload photo
+        // ✅ Upload photo (stocké en base — le filesystem Render est éphémère)
         $photoFile = $request->files->get('photo');
 
         if ($photoFile) {
+            $photoData = base64_encode($photoFile->getContent());
+            $photoMime = $photoFile->getMimeType() ?: 'image/jpeg';
             $fileName = uniqid() . '.' . $photoFile->guessExtension();
 
             $photoFile->move(
@@ -132,6 +134,8 @@ class ClientController extends AbstractController
             );
 
             $client->setPhoto('uploads/clients/' . $fileName);
+            $client->setPhotoData($photoData);
+            $client->setPhotoMime($photoMime);
         }
 
         $em->persist($client);
@@ -174,15 +178,18 @@ class ClientController extends AbstractController
         if ($lastName)  $client->setLastName($lastName);
         if ($phone)     $client->setPhone($phone);
         if ($email)     $client->setEmail($email);
-
         $photoFile = $request->files->get('photo');
         if ($photoFile) {
+            $photoData = base64_encode($photoFile->getContent());
+            $photoMime = $photoFile->getMimeType() ?: 'image/jpeg';
             $fileName = uniqid() . '.' . $photoFile->guessExtension();
             $photoFile->move(
                 $this->getParameter('kernel.project_dir') . '/public/uploads/clients',
                 $fileName
             );
             $client->setPhoto('uploads/clients/' . $fileName);
+            $client->setPhotoData($photoData);
+            $client->setPhotoMime($photoMime);
         }
 
         $em->flush();
@@ -220,6 +227,30 @@ class ClientController extends AbstractController
             200,
             ['Content-Type' => 'image/png']
         );
+    }
+
+    #[Route('/{id}/photo', methods: ['GET'])]
+    public function photo(Client $client): Response
+    {
+        if ($client->getPhotoData()) {
+            return new Response(
+                base64_decode($client->getPhotoData()),
+                200,
+                ['Content-Type' => $client->getPhotoMime() ?: 'image/jpeg']
+            );
+        }
+
+        // Fallback : fichier statique (avant stockage en base)
+        $path = $this->getParameter('kernel.project_dir') . '/public/' . $client->getPhoto();
+        if ($client->getPhoto() && file_exists($path)) {
+            return new Response(
+                file_get_contents($path),
+                200,
+                ['Content-Type' => mime_content_type($path) ?: 'image/jpeg']
+            );
+        }
+
+        return new Response('', 404);
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
