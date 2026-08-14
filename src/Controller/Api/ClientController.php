@@ -22,9 +22,14 @@ class ClientController extends AbstractController
 {
 
     #[Route('', methods: ['GET'])]
-    public function index(ClientRepository $clientRepository): JsonResponse
+    public function index(ClientRepository $clientRepository, GymResolver $gymResolver): JsonResponse
     {
-        $clients = $clientRepository->findAll();
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json([]); // pas de gym → ne pas exposer les clients des autres salles
+        }
+
+        $clients = $clientRepository->findBy(['gym' => $gym]);
 
         $data = [];
 
@@ -45,8 +50,13 @@ class ClientController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(Client $client): JsonResponse
+    public function show(Client $client, GymResolver $gymResolver): JsonResponse
     {
+        $gym = $gymResolver->getGym();
+        if (!$gym || $client->getGym()?->getId() !== $gym->getId()) {
+            return $this->json(["error" => "Client introuvable"], 404);
+        }
+
         $subscription = null;
         $status = "Aucun abonnement";
 
@@ -166,8 +176,13 @@ class ClientController extends AbstractController
 
     // ← Accepte POST uniquement pour éviter le bug PUT+FormData
     #[Route('/{id}', methods: ['POST'])]
-    public function update(Client $client, Request $request, EntityManagerInterface $em): JsonResponse
+    public function update(Client $client, Request $request, EntityManagerInterface $em, GymResolver $gymResolver): JsonResponse
     {
+        $gym = $gymResolver->getGym();
+        if (!$gym || $client->getGym()?->getId() !== $gym->getId()) {
+            return $this->json(["error" => "Client introuvable"], 404);
+        }
+
         // Plus besoin des fallbacks — POST lit toujours bien $_POST
         $firstName = $request->request->get('firstName');
         $lastName  = $request->request->get('lastName');
@@ -254,8 +269,13 @@ class ClientController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
-    public function delete(Client $client, EntityManagerInterface $em): JsonResponse
+    public function delete(Client $client, EntityManagerInterface $em, GymResolver $gymResolver): JsonResponse
     {
+        $gym = $gymResolver->getGym();
+        if (!$gym || $client->getGym()?->getId() !== $gym->getId()) {
+            return $this->json(["error" => "Client introuvable"], 404);
+        }
+
         $em->remove($client);
         $em->flush();
 

@@ -15,9 +15,14 @@ use Symfony\Component\Routing\Attribute\Route;
 class UserController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): JsonResponse
+    public function index(EntityManagerInterface $em, GymResolver $gymResolver): JsonResponse
     {
-        $users = $em->getRepository(User::class)->findAll();
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return new JsonResponse([]); // pas de gym → ne pas exposer les users des autres salles
+        }
+
+        $users = $em->getRepository(User::class)->findBy(['gym' => $gym]);
         $data  = [];
 
         foreach ($users as $user) {
@@ -37,8 +42,13 @@ class UserController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(User $user): JsonResponse
+    public function show(User $user, GymResolver $gymResolver): JsonResponse
     {
+        $gym = $gymResolver->getGym();
+        if (!$gym || $user->getGym()?->getId() !== $gym->getId()) {
+            return new JsonResponse(["error" => "Utilisateur introuvable"], 404);
+        }
+
         return new JsonResponse([
             "id"    => $user->getId(),
             "email" => $user->getEmail(),
@@ -95,10 +105,15 @@ class UserController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['DELETE'])]
-    public function delete(User $user, EntityManagerInterface $em): JsonResponse
+    public function delete(User $user, EntityManagerInterface $em, GymResolver $gymResolver): JsonResponse
     {
         // ← protection admin
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $gym = $gymResolver->getGym();
+        if (!$gym || $user->getGym()?->getId() !== $gym->getId()) {
+            return new JsonResponse(["error" => "Utilisateur introuvable"], 404);
+        }
 
         // empêcher la suppression de son propre compte
         if ($user === $this->getUser()) {

@@ -22,7 +22,12 @@ class CheckinController extends AbstractController
     public function index(
         \App\Repository\CheckinRepository $checkinRepo
     ): JsonResponse {
-        $checkins = $checkinRepo->findBy([], ['checkinTime' => 'DESC'], 20);
+        $gym = $this->gymResolver->getGym();
+        if (!$gym) {
+            return $this->json([]); // pas de gym → ne pas exposer les checkins des autres salles
+        }
+
+        $checkins = $checkinRepo->findBy(['gym' => $gym], ['checkinTime' => 'DESC'], 20);
 
         $data = [];
         foreach ($checkins as $checkin) {
