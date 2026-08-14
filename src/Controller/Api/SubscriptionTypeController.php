@@ -15,9 +15,14 @@ use Symfony\Component\Routing\Attribute\Route;
 class SubscriptionTypeController extends AbstractController
 {
     #[Route('', methods: ['GET'])]
-    public function index(SubscriptionTypeRepository $repo): JsonResponse
+    public function index(SubscriptionTypeRepository $repo, GymResolver $gymResolver): JsonResponse
     {
-        $types = $repo->findAll();
+        $gym = $gymResolver->getGym();
+        if (!$gym) {
+            return $this->json([]); // pas de gym → ne pas exposer les types des autres salles
+        }
+
+        $types = $repo->findBy(['gym' => $gym]);
 
         $data = [];
 
@@ -29,8 +34,13 @@ class SubscriptionTypeController extends AbstractController
     }
 
     #[Route('/{id}', methods: ['GET'])]
-    public function show(SubscriptionType $type): JsonResponse
+    public function show(SubscriptionType $type, GymResolver $gymResolver): JsonResponse
     {
+        $gym = $gymResolver->getGym();
+        if (!$gym || $type->getGym()?->getId() !== $gym->getId()) {
+            return $this->json(["error" => "Type d'abonnement introuvable"], 404);
+        }
+
         return $this->json($this->format($type));
     }
 
@@ -68,7 +78,13 @@ class SubscriptionTypeController extends AbstractController
         SubscriptionType $type,
         Request $request,
         EntityManagerInterface $em,
+        GymResolver $gymResolver,
     ): JsonResponse {
+        $gym = $gymResolver->getGym();
+        if (!$gym || $type->getGym()?->getId() !== $gym->getId()) {
+            return $this->json(["error" => "Type d'abonnement introuvable"], 404);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         if (isset($data['name'])) {
@@ -92,7 +108,13 @@ class SubscriptionTypeController extends AbstractController
     public function delete(
         SubscriptionType $type,
         EntityManagerInterface $em,
+        GymResolver $gymResolver,
     ): JsonResponse {
+        $gym = $gymResolver->getGym();
+        if (!$gym || $type->getGym()?->getId() !== $gym->getId()) {
+            return $this->json(["error" => "Type d'abonnement introuvable"], 404);
+        }
+
         $em->remove($type);
         $em->flush();
 
