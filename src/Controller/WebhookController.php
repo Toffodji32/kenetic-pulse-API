@@ -116,6 +116,11 @@ class WebhookController extends AbstractController
                 $user = $this->em->getRepository(\App\Entity\User::class)->findOneByEmail($customerEmail);
                 $gym = $user?->getGym();
             }
+            // Fallback 2 : le client peut payer sans compte User (table Client)
+            if (!$gym && $customerEmail) {
+                $client = $this->em->getRepository(\App\Entity\Client::class)->findOneBy(['email' => $customerEmail]);
+                $gym = $client?->getGym();
+            }
             if (!$gym) {
                 $this->logger->warning('Webhook transaction.approved : gym introuvable (pas de gym_id ni d\'email client connu)', [
                     'event_id' => $webhookEvent->getFedapayEventId(),

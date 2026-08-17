@@ -8,6 +8,7 @@ use App\Repository\ClientRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTypeRepository;
 use App\Security\GymResolver;
+use App\Service\WalletService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +26,7 @@ class SubscriptionController extends AbstractController
         SubscriptionTypeRepository $typeRepository,
         EntityManagerInterface $em,
         GymResolver $gymResolver,
+        WalletService $walletService,
     ): JsonResponse {
 
         $data     = json_decode($request->getContent(), true);
@@ -82,6 +84,22 @@ class SubscriptionController extends AbstractController
 
         $em->flush();
 
+        // Créditer le wallet pour le paiement de l'abonnement (même logique que PaymentController)
+        if (isset($payment)) {
+            $alreadyCredited = $em->getRepository(\App\Entity\WalletTransaction::class)
+                ->findOneBy(['reference' => $payment->getReference(), 'type' => 'credit']);
+            if (!$alreadyCredited) {
+                $walletService->credit(
+                    $gym,
+                    (int) $payment->getAmount(),
+                    $payment->getReference(),
+                    'Paiement abonnement — #' . $subscription->getId(),
+                    [],
+                    0
+                );
+            }
+        }
+
         return $this->json([
             'message'   => 'Abonnement créé avec succès',
             'client_id' => $client->getId(),
@@ -132,6 +150,7 @@ class SubscriptionController extends AbstractController
         Subscription $oldSubscription,
         EntityManagerInterface $em,
         GymResolver $gymResolver,
+        WalletService $walletService,
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
@@ -172,6 +191,22 @@ class SubscriptionController extends AbstractController
         }
 
         $em->flush();
+
+        // Créditer le wallet pour le paiement du renouvellement (même logique que PaymentController)
+        if (isset($payment)) {
+            $alreadyCredited = $em->getRepository(\App\Entity\WalletTransaction::class)
+                ->findOneBy(['reference' => $payment->getReference(), 'type' => 'credit']);
+            if (!$alreadyCredited) {
+                $walletService->credit(
+                    $gym,
+                    (int) $payment->getAmount(),
+                    $payment->getReference(),
+                    'Paiement abonnement — #' . $newSubscription->getId(),
+                    [],
+                    0
+                );
+            }
+        }
 
         return $this->json([
             'message'             => 'Abonnement renouvelé',
