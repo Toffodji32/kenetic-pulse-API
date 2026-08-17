@@ -41,7 +41,9 @@ ENV MESSENGER_TRANSPORT_DSN=doctrine://default?auto_setup=0
 ENV FEDAPAY_SECRET_KEY=sk_sandbox_ymFzMM3g7lgDLLjNbte5txWx
 ENV FEDAPAY_ENV=sandbox
 
-RUN composer --version && composer install --no-dev --optimize-autoloader --no-interaction --no-scripts 2>&1
+RUN composer config -g github-protocols https
+
+RUN composer --version && composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --prefer-dist 2>&1
 
 RUN mkdir -p public/qrcodes public/uploads/clients public/uploads/products config/jwt
 
