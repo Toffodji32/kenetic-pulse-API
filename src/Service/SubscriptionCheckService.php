@@ -48,6 +48,17 @@ class SubscriptionCheckService
                 if (!$dryRun) {
                     $this->mailerService->sendSubscriptionExpiredMail($subscription);
                     $subscription->setExpiryMailSentAt(new \DateTime());
+                    $this->createNotification(
+                        $subscription->getGym(),
+                        'subscription_expired',
+                        'Abonnement expiré',
+                        sprintf(
+                            '%s (%s) — abonnement expiré le %s',
+                            $this->clientName($subscription),
+                            $subscription->getSubscriptionType()->getName(),
+                            $subscription->getEndDate()->format('d/m/Y')
+                        )
+                    );
                     $changed = true;
                 }
                 $result['expired'][] = $this->clientInfo($subscription, ['expired' => true]);
@@ -135,6 +146,17 @@ class SubscriptionCheckService
             if (!$dryRun) {
                 $this->mailerService->sendSubscriptionReminderMail($subscription, $daysLeft);
                 $subscription->setLastReminderDays($daysLeft);
+                $this->createNotification(
+                    $subscription->getGym(),
+                    'subscription_expiring',
+                    sprintf('Abonnement expire dans %d jour%s', $daysLeft, $daysLeft > 1 ? 's' : ''),
+                    sprintf(
+                        '%s (%s) — expire le %s',
+                        $this->clientName($subscription),
+                        $subscription->getSubscriptionType()->getName(),
+                        $subscription->getEndDate()->format('d/m/Y')
+                    )
+                );
             }
             $result['reminders'][] = $this->clientInfo($subscription, ['days_left' => $daysLeft]);
             return true;
@@ -156,6 +178,25 @@ class SubscriptionCheckService
             'email'      => $client->getEmail(),
             'expires_on' => $subscription->getEndDate()->format('Y-m-d'),
         ], $extra);
+    }
+
+    private function clientName($subscription): string
+    {
+        $client = $subscription->getClient();
+        return trim($client->getFirstName() . ' ' . $client->getLastName());
+    }
+
+    private function createNotification(?\App\Entity\Gym $gym, string $type, string $title, string $message): void
+    {
+        if (!$gym) {
+            return;
+        }
+        $notification = new \App\Entity\Notification();
+        $notification->setGym($gym);
+        $notification->setType($type);
+        $notification->setTitle($title);
+        $notification->setMessage($message);
+        $this->em->persist($notification);
     }
 
     private function daysLeft($subscription): int
