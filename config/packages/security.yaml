@@ -71,6 +71,9 @@ security:
         # Webhooks FedaPay (public — no JWT)
         - { path: ^/api/webhooks/fedapay, roles: PUBLIC_ACCESS }
 
+        # Cron externe (protégé par header X-Cron-Token)
+        - { path: ^/api/cron, roles: PUBLIC_ACCESS, methods: [POST] }
+
         # QR code client (image chargée via <img>, sans header JWT — contient uniquement uuid+nom)
         - { path: ^/api/clients/\d+/qr-code, roles: PUBLIC_ACCESS, methods: [GET] }
 

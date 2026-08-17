@@ -1,0 +1,22 @@
+name: Daily subscription check
+
+on:
+  schedule:
+    # 07:30 UTC = 08:30 heure du Bénin (UTC+1), chaque jour
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-subscriptions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger subscription check on Render
+        env:
+          CRON_TOKEN: ${{ secrets.CRON_TOKEN }}
+        run: |
+          curl -sS -X POST \
+            "https://kenetic-pulse-api.onrender.com/api/cron/check-subscriptions" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Token: ${CRON_TOKEN}" \
+            --max-time 120
+          echo "HTTP status: $?"

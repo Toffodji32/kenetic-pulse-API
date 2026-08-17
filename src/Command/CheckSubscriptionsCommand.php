@@ -1,103 +1,56 @@
 <?php
 namespace App\Command;
 
-use App\Repository\SubscriptionRepository;
-use App\Service\MailerService;
+use App\Service\SubscriptionCheckService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:check-subscriptions',
-    description: 'Vérifie les abonnements et notifie les clients',
+    description: 'Vérifie les abonnements et notifie les clients et les propriétaires de salle',
 )]
 class CheckSubscriptionsCommand extends Command
 {
     public function __construct(
-        private SubscriptionRepository $subscriptionRepo,
-        private MailerService          $mailerService,
+        private SubscriptionCheckService $checkService,
     ) {
         parent::__construct();
     }
 
+    protected function configure(): void
+    {
+        $this->addOption('dry-run', null, InputOption::VALUE_NONE, 'Affiche ce qui serait envoyé sans envoyer d\'email');
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
-        $io->title('Vérification des abonnements — ' . date('d/m/Y H:i'));
+        $io     = new SymfonyStyle($input, $output);
+        $dryRun = (bool) $input->getOption('dry-run');
 
-        $today   = new \DateTime();
-        $in3days = (new \DateTime())->modify('+3 days');
-        $in7days = (new \DateTime())->modify('+7 days');
+        $io->title('Vérification des abonnements — ' . date('d/m/Y H:i') . ($dryRun ? ' [DRY RUN]' : ''));
 
-        // ── 1. Expirés ────────────────────────────────────────────────────
-        $expired = $this->subscriptionRepo->findExpired($today);
-        $io->section(sprintf('%d abonnement(s) expiré(s)', count($expired)));
+        $result = $this->checkService->run($dryRun);
 
-        foreach ($expired as $subscription) {
-            try {
-                $this->mailerService->sendSubscriptionExpiredMail($subscription);
-                $io->text(sprintf(
-                    '  [EXPIRÉ] %s %s → %s',
-                    $subscription->getClient()->getFirstName(),
-                    $subscription->getClient()->getLastName(),
-                    $subscription->getClient()->getEmail(),
-                ));
-            } catch (\Exception $e) {
-                $io->warning(sprintf(
-                    '  Erreur mail %s : %s',
-                    $subscription->getClient()->getEmail(),
-                    $e->getMessage()
-                ));
-            }
+        $io->section(sprintf('%d abonnement(s) expiré(s)', count($result['expired'])));
+        foreach ($result['expired'] as $r) {
+            $io->text(sprintf('  [EXPIRÉ] %s → %s', $r['client'], $r['email']));
         }
 
-        // ── 2. Expirant dans 3 jours ──────────────────────────────────────
-        $expiring3 = $this->subscriptionRepo->findExpiringSoon($today, $in3days);
-        $io->section(sprintf('%d abonnement(s) expirant dans 3 jours', count($expiring3)));
-
-        foreach ($expiring3 as $subscription) {
-            try {
-                $this->mailerService->sendSubscriptionReminderMail($subscription, 3);
-                $io->text(sprintf(
-                    '  [RAPPEL 3j] %s %s → %s',
-                    $subscription->getClient()->getFirstName(),
-                    $subscription->getClient()->getLastName(),
-                    $subscription->getClient()->getEmail(),
-                ));
-            } catch (\Exception $e) {
-                $io->warning(sprintf(
-                    '  Erreur mail %s : %s',
-                    $subscription->getClient()->getEmail(),
-                    $e->getMessage()
-                ));
-            }
+        $io->section(sprintf('%d rappel(s) client', count($result['reminders'])));
+        foreach ($result['reminders'] as $r) {
+            $io->text(sprintf('  [RAPPEL J-%d] %s → %s (expire le %s)', $r['days_left'], $r['client'], $r['email'], $r['expires_on']));
         }
 
-        // ── 3. Expirant dans 7 jours ──────────────────────────────────────
-        $expiring7 = $this->subscriptionRepo->findExpiringSoon($in3days, $in7days);
-        $io->section(sprintf('%d abonnement(s) expirant dans 7 jours', count($expiring7)));
-
-        foreach ($expiring7 as $subscription) {
-            try {
-                $this->mailerService->sendSubscriptionReminderMail($subscription, 7);
-                $io->text(sprintf(
-                    '  [RAPPEL 7j] %s %s → %s',
-                    $subscription->getClient()->getFirstName(),
-                    $subscription->getClient()->getLastName(),
-                    $subscription->getClient()->getEmail(),
-                ));
-            } catch (\Exception $e) {
-                $io->warning(sprintf(
-                    '  Erreur mail %s : %s',
-                    $subscription->getClient()->getEmail(),
-                    $e->getMessage()
-                ));
-            }
+        $io->section(sprintf('%d récap(s) propriétaire', count($result['owner_summaries'])));
+        foreach ($result['owner_summaries'] as $r) {
+            $io->text(sprintf('  [SALLE] %s (%s) → %s : %d abonnement(s)', $r['gym'], $r['gym_id'], $r['owner_email'], $r['subscriptions']));
         }
 
-        $io->success('Vérification terminée.');
+        $io->success('Vérification terminée.' . ($dryRun ? ' (aucun email envoyé)' : ''));
         return Command::SUCCESS;
     }
 }

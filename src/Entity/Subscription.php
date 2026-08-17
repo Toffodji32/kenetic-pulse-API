@@ -35,6 +35,18 @@ class Subscription
     #[ORM\Column(length: 50)]
     private ?string $status = null;
 
+    /**
+     * Date d'envoi du mail "abonnement expiré" (anti-spam : un seul envoi).
+     */
+    #[ORM\Column(type: "datetime", nullable: true)]
+    private ?\DateTime $expiryMailSentAt = null;
+
+    /**
+     * Jours restants du dernier rappel envoyé au client (anti-spam : J-7 puis J-3 uniquement).
+     */
+    #[ORM\Column(type: "integer", nullable: true)]
+    private ?int $lastReminderDays = null;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private ?Gym $gym = null;
@@ -123,6 +135,30 @@ class Subscription
     public function setStatus(string $status): static
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getExpiryMailSentAt(): ?\DateTime
+    {
+        return $this->expiryMailSentAt;
+    }
+
+    public function setExpiryMailSentAt(?\DateTime $expiryMailSentAt): static
+    {
+        $this->expiryMailSentAt = $expiryMailSentAt;
+
+        return $this;
+    }
+
+    public function getLastReminderDays(): ?int
+    {
+        return $this->lastReminderDays;
+    }
+
+    public function setLastReminderDays(?int $lastReminderDays): static
+    {
+        $this->lastReminderDays = $lastReminderDays;
 
         return $this;
     }

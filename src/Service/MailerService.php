@@ -134,6 +134,31 @@ class MailerService
         $this->mailer->send($email);
     }
 
+    public function sendSubscriptionExpirySummaryMail(\App\Entity\Gym $gym, array $items): void
+    {
+        $owner = $gym->getGymOwner();
+        if (!$owner || !$owner->getEmail()) {
+            return;
+        }
+
+        $html = $this->twig->render('emails/subscription_expiry_summary.html.twig', [
+            'gym'   => $gym,
+            'items' => $items,
+        ]);
+
+        $email = (new Email())
+            ->from(new Address('toffodjiatchade@gmail.com', 'Kinetic Pulse'))
+            ->to(new Address($owner->getEmail(), $owner->getName()))
+            ->subject(sprintf(
+                'Kinetic Pulse — %d abonnement(s) expirent bientôt (%s)',
+                count($items),
+                $gym->getName()
+            ))
+            ->html($html);
+
+        $this->mailer->send($email);
+    }
+
     public function sendRaw(Email $email): void
     {
         try {
